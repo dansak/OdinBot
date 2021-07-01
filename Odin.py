@@ -1,7 +1,22 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 30 20:46:49 2021
+import numpy as np
+import pandas as pd
 
-@author: Dan Desktop
-"""
+class Player():
+    def __init__(self):
+        self.resources = []
+    
+class Hand():
+    def __init__(self):
+        self.cards = []
 
+class Occupation():
+    
+class Weapon():
+    def __init__(self, weapon):
+        self.weapon = weapon
+    
+class Resource():
+    
+    
+class Action():
+    
