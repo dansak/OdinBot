@@ -1,18 +1,17 @@
 import numpy as np
 import pandas as pd
 
-class Board():
-    def __init(self, players, turn):
+class Game():
+    def __init__(self, players):
         self.players = players # List of players in Game
-        self.turn = turn # Who's turn
         self.expBoards = [] # List of available exploration boards
         self.houses = [] # List of available houses
         self.specialTiles = [] # List of available special tiles
-        self.mountains = drawFirstMountains() # List of available mountains
+        self.mountains = self.drawFirstMountains() # List of available mountains
         self.actions = [] # List of available actions
-        
-        def drawFirstMountains(self):
-            return None 
+    
+    def drawFirstMountains(self):
+        return None 
 
 class Player():
     def __init__(self):
@@ -60,9 +59,48 @@ class Player():
         self.hand = Hand()
         self.expBoards = []
         self.houses = []
+        self.gameBoard = GameBoard()
+        self.game = None
         
     def playAction(self, Action):
         Action.play()
+        
+class GameBoard():
+    def __init__(self):
+        # Tile definitions: X = not placable, F = free, P = free -1 point, O = occupied, B<resource> = bonus resource, I<number> = income added from occupying
+        # Tiles are arranged by rows from bottom to top 
+        self.income = 0
+        self.bonuses = []
+        self.tiles = [['I1','F','F','F','F','F','F','P','X','X','X','X','X'],
+                      ['F','I1','F','F','F','Bstone','F','P','P','P','P','P','X'],
+                      ['F','Bmead','F','F','F','F','F','P','P','P','P','P','X'],
+                      ['F','F','F','I1','F','F','F','P','P','P','P','P','X'],
+                      ['F','F','Bwood','F','I1','F','Brunestone','P','P','P','P','P'],
+                      ['F','F','F','F','F','I1','F','P','P','P','P','P','X'],
+                      ['Bore','F','F','F','F','F','I1','P','P','P','P','P','X'],
+                      ['P','P','P','P','P','P','P','I1','P','P','P','P','X'],
+                      ['P','P','P','P','P','P','P','P','I2','P','P','P','X'],
+                      ['P','P','P','P','P','P','P','P','P','I3','P','P','F'],
+                      ['P','P','P','P','P','P','P','P','P','P','I3','P','F'],
+                      ['P','P','P','P','P','P','P','P','P','P','P','I3','F']]
+        
+class ExpBoard():
+    def __init__(self, expType):
+        # Tile definitions: X = not placable, F = free, P = free -1 point, O = occupied, B<resource> = bonus resource, I<number> = income added from occupying
+        # Tiles are arranged by rows from bottom to top
+        if expType == "Shetland":
+            self.income = 0
+            self.points = 6
+            self.bonuses = []
+            self.tiles = [['X','F','F','X','X','X','P','P','F'],
+                          ['I1','F','Bbeans','X','X','X','P','P','P'],
+                          ['F','I1','F','X','F','P','P','P','F','F','F'],
+                          ['F','F','I1','X','P','P','F','Bcabbage','F'],
+                          ['X','X','X','X','P','P','F','F','F'],
+                          ['P','P','P','P','F','F','F','Boil','F'],
+                          ['P','BgameMeat','P','P','F','F','P','P','F'],
+                          ['P','P','P','P','F','Bsilverware','F','X','X'],
+                          ['X','X','X','X','F','F','F','X','X']]
         
     
 class Hand():
@@ -92,6 +130,6 @@ class Action():
         
         
 class BuildShed(Action):
-    def __init__(self, player, cost, reward:
+    def __init__(self, player, cost, reward):
         super(BuildShed, self).__init__(self, player, cost, reward)
-        
+        print("Shed")

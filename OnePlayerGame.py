@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
-from OdinBot import Classes
+from Classes import *
 
-player = Player()
+p1 = Player()
+game = Game(players=[p1])
 
 print(player.silver)
+print(player.wood)
