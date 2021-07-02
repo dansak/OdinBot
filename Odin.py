@@ -3,13 +3,17 @@ import pandas as pd
 import random
 
 class Game():
-    def __init__(self, nPlayers, occupationSet = ['A']):
+    def __init__(self, nHumanPlayers, nBotPlayers, occupationSet = ['A']):
         # Available exploration boards and stored silver
         self.availableExplorationBoards = {'Shetland':0,'FaroeIslands':0,'Iceland':0,'Greenland':0} 
         
         # Available houses
         self.houses = []
+        
+        # Available Sepcial Tiles
         self.availableSpecialTiles = ['GlassBeads','Helmet','Cloakpin','Belt','Crucifix','DrinkingHorn','AmberFigure','Horesshoe','GoldBrooch','ForgeHammer','Fibula','ThrowingAxe','Chalice','RoundShield','EnglishCrown'] # Available special tiles
+        
+        # Available mountains
         self.availableMountains = [['W','W','W','W','S','S','S2'],
                                    ['W','W','S','S','O','O','S2'],
                                    ['W','W','W','S','O','O','S2'],
@@ -17,44 +21,92 @@ class Game():
                                    ['W','W','W','S','S','O','S2'],
                                    ['W','W','W','W','S','O','S2'],
                                    ['W','W','W','S','S','S','S2'],
-                                   ['W','W','S','S','S','O','S2']] # Available mountains
-        self.mountains = [] # Current Mountains
-        self.availableWeapons = ['Sword'] * 11 + ['Bow'] * 12 + ['Spear'] * 12 + ['Snare'] * 12
-        self.availableHouses = ['Shed'] * 3 + ['StoneHouse'] * 3 + ['LongHouse'] * 5
-
-        self.round = 1
-        self.actions = [] # List of available actions
-        self.players = []
+                                   ['W','W','S','S','S','O','S2']] 
         
-        for i in range(nPlayers):
+        # Current Mountains in play
+        self.mountains = [] 
+        
+        # Available Weapons
+        self.availableWeapons = ['Sword'] * 11 + ['Bow'] * 12 + ['Spear'] * 12 + ['Snare'] * 12
+        
+        # Available Houses
+        self.availableHouses = ['Shed'] * 3 + ['StoneHouse'] * 3 + ['LongHouse'] * 5
+        
+        # Available action spaces
+        self.availableActions = ['BuildShed','BuildStoneHouse','BuildLongHouse']
+        
+        # Available anytime actions
+        self.availableAnytimeActions = ['PlaceFeast','PlaceTile','BuyBoat','Arming']
+
+        # Current round
+        self.round = 1
+        
+        # Populate players in game
+        self.players = []
+        for i in range(nHumanPlayers + nBotPlayers):
             self.players.append(Player(i))
             
-        self.turn = random.randint(0, nPlayers - 1)
+        # Determine who goes first
+        self.turn = random.randint(0, nHumanPlayers + nBotPlayers - 1)
+        
+        # Initialize starting player token which will be assigned when the first person passes
         self.startingPlayer = None
         
         # Draw first two mountains
         self.drawMountain() 
         self.drawMountain() 
         
+        # Available occupations to draw
         self.availableStartingOccupations = []
         self.availableOccupations = []
         
         # Populate occupations set
         for i in occupationSet:
             if i == 'A':
-                self.availableStartingOccupations += ['Farmhand','Sheapherd','Catapulter','Refugee Helper','Proficient Hunter',
-                                                      'Apprentice Craftsman','Bosporus Traveler','Forester','Tanner','Slowpoke',
-                                                      'Sober Man','Melee Fighter','Woodcutter','Tutor','Craft Leader']
-                self.availableOccupations += ['Foreign Trader','Steersman','Helmsman','Linen Weaver','Tradesman','Ship Builder',
-                                              'Builder','Ships Cook','Homecomer','Miner','Weapons Supplier','Follower','Dragonslayer',
-                                              'Yield Farmer','Shipowner','Fisherman','Ore Boatman','Digger','Farmer','Merchant','Nobleman',
-                                              'Whaling Equipper','Hide Buyer','Village Leader','Chief','Sheep Shearer','Spice Merchant',
-                                              'Miller','Drunkard','Rune Engraver','Linseed Oil Presser','Peacemaker','Wanderer','Wholesaler',
-                                              'Cattle Breeder','Orient Shipper','Barbarian','Armed Fighter','Cowherd','Custodian','Blubber Cook',
-                                              'Meat Merchant','Mountain Guard','Priest','Trapper','Preacher','Breeder','Arms Dealer',
-                                              'Weapon Supplier','Tutor2','Furrier','Milker','Pea Flour Baker','Fruit Picker','Flax Baker','Peddler']
-#            elif i == 'B':
-#            elif i == 'C':
+                self.availableStartingOccupations += ['Farmhand','Sheapherd','Catapulter','RefugeeHelper','ProficientHunter',
+                                                      'ApprenticeCraftsman','BosporusTraveler','Forester','Tanner','Slowpoke',
+                                                      'SoberMan','MeleeFighter','Woodcutter','Tutor','CraftLeader']
+                self.availableOccupations += ['ForeignTrader','Steersman','Helmsman','LinenWeaver','Tradesman','ShipBuilder',
+                                              'Builder','ShipsCook','Homecomer','Miner','WeaponsSupplier','Follower','Dragonslayer',
+                                              'YieldFarmer','Shipowner','Fisherman','OreBoatman','Digger','Farmer','Merchant','Nobleman',
+                                              'WhalingEquipper','HideBuyer','VillageLeader','Chief','SheepShearer','SpiceMerchant',
+                                              'Miller','Drunkard','RuneEngraver','LinseedOilPresser','Peacemaker','Wanderer','Wholesaler',
+                                              'CattleBreeder','OrientShipper','Barbarian','ArmedFighter','Cowherd','Custodian','BlubberCook',
+                                              'MeatMerchant','MountainGuard','Priest','Trapper','Preacher','Breeder','ArmsDealer',
+                                              'WeaponSupplier','Tutor2','Furrier','Milker','PeaFlourBaker','FruitPicker','FlaxBaker','Peddler']
+            elif i == 'B':
+                self.availableStartingOccupations += ['DisheartenedWarrior','Collector','Undertaker','Barkeep','Steward','Princess','FineBlacksmith',
+                                                      'MeatCurer','Angler','BeanFarmer','Cooper','Milkman','Middleman','FarmShopOwner','Berserker']
+                self.availableOccupations += ['CodliverOilPresser','HarborGuard','FestiveHunter','WeaponsWarden','WhalingAssistant','Judge',
+                                              'Warmonger','TravelingMerchant','MeatTrader','MasterMason','Earl','WhaleCatcher','CutterOperator',
+                                              'SilkMerchant','PeaCounter','Seafarer','Deerstalker','Courier','Maid','Locksmith','StoneCrusher',
+                                              'LanceBearer','EtiquetteTeacher','MasterTailor','KnarrBuilder','MasterJoiner','SheapherdBoy','LongshipBuilder',
+                                              'FurMerchant','Aventurer','BoatBuilder','BosporusMerchant','Carpenter','Punchcutter','DorestadTraveller',
+                                              'Chronicler','Laborer','AntlersSeller','Stonecarver','Archer','Taster','ShipArchitect','MeatPreserver','MasterCount']
+            elif i == 'C':
+                self.availableStartingOccupations += ['Hunter','Robber','MeatInspector','TridentHunter','Raider','ThingSpokesman','Messenger','Latecomer',
+                                                      'MasterBricklayer','Scribe','IvorySculptor','Ironsmith','MeatBuyer','EquipmentSupplier','BaitLayer']
+                self.availableOccupations += ['PrivateChef','Skinner','Sponsor','Modifier','Artist','Inspector','Sower','Pirate','Metasmith',
+                                              'ShipOwner','Cottager','Innkeeper','Plower','Treasurer','FishCook','BoneCollector','HelperInNeedOfTime',
+                                              'SwordFighter','Captain','Hornturner','SilkSticher','BeachRaider','HerbGardener','GrainDeliveryman',
+                                              'BirkaSettler','Storeman','SpiceMerchant2','Clerk','Quartermaster','ForestBlacksmith','Sledger',
+                                              'SympatheticSoul','Patron','SailPatcher','LootHunter','OilSeller','EarlofLade','FlaxFarmer','SnareSpecialist',
+                                              'WharfOwner','Host','Hornblower','Mineworker','Fighter']
+                
+        # Draw each player a starting occupation card and starting weapons
+        for i in self.players:
+            i.occupations.append(self.availableStartingOccupations.pop(random.randint(0, len(self.availableStartingOccupations) - 1)))
+            
+            i.resources['Bow'] += 1
+            i.resources['Spear'] += 1
+            i.resources['Snare'] += 1
+            
+            self.availableWeapons.remove('Bow')
+            self.availableWeapons.remove('Spear')
+            self.availableWeapons.remove('Snare')
+            
+            i.resources[self.availableWeapons.pop(random.randint(0, len(self.availableWeapons) - 1))] += 1
+
                 
                 
 
@@ -157,8 +209,7 @@ class Game():
     def returnVikingsPhase(self):
         for i in self.players:
             i.vikings = self.round + 6    
-        self.round += 1            
-                        
+        self.round += 1                          
             
     def drawWeapon(self, player, nWeapons):
         for i in range(nWeapons):
@@ -189,16 +240,51 @@ class Game():
     def drawMountain(self):
         self.mountains.append(self.availableMountains.pop(random.randint(0, len(self.availableMountains) - 1)))
     
-                
+    # Pass the turn to the next player
     def passTurn(self, player):
+        if player.madeAction:
+            self.turn += 1
+            if self.turn > len(self.players) - 1:
+                self.turn = 0
+        else:
+            print('You need to make an action before passing!')
+        
+     # Completely end turn for the round          
+    def endTurn(self, player):
         if self.startingPlayer == None:
             self.startingPlayer = player.ID
-        player.passed = True
+        player.endedTurn = True
+        
+    # Take an action or anytime action
+    def takeAction(self, player, action):
+        if player.endedTurn:
+            print('Player already ended their turn!')
+        elif player.madeAction:
+            print('Player already made an action this turn!')
+        elif action not in self.availableActions + self.availableAnytimeActions:
+            print('Action has already been taken this round!')
+        elif self.turn == player.ID:
+            print('Take Action')
+        else:
+            print('It is player ' + str(self.turn) + '\'s turn, not player ' + str(self.playerID) + '\'s!')
+    
+    def determineValidActions(self, player, action):
+        player.validActions = []
+        if player.resources['Wood'] >= 2 and 'Shed' in self.availableHouses:
+            player.validActions += 'BuildShed'
+            
+    def determineValidFeastPlacement(self, player):
+        if 'F' not in player.feastTable:
+            print('Feast Table is already full!')
+        else:
+            possibleOrangeTiles = []
 
     def buildShed(self, player):
-        if player.passed == True:
-            print('Player already passed!')
-        if self.turn == player.ID:
+        if player.endedTurn:
+            print('Player already ended their turn!')
+        elif player.madeAction:
+            print('Player already made an action this turn!')
+        elif self.turn == player.ID:
             if 'Shed' in self.availableHouses:
                 self.availableHouses.remove('Shed')
                 player.houses.append(House('Shed'))
@@ -207,13 +293,13 @@ class Game():
         else:
             print('It is player ' + str(self.turn) + '\'s turn, not player ' + str(self.playerID) + '\'s!')
             
-                       
-    
+                      
 class Player():
     def __init__(self, ID):
         self.ID = ID
         self.vikings = 6
-        self.passed = False
+        self.endedTurn = False
+        self.madeAction = False
         self.whalingBoats = []
         self.knarrs = []
         self.longships = []
@@ -222,20 +308,22 @@ class Player():
         self.expBoards = []
         self.houses = []
         self.bonuses = []
-        self.feastTable = dict()
         self.playerBoard = PlayerBoard()
+        self.validActions = []
       
         self.resources = {'Silver':0, 'Stone':0, 'Wood':0, 'Ore':0, 'Peas':1, 'Mead':1, 'Flax':1, 'Stockfish':0, 'Beans':1, 'Milk':0, 
                           'Grain':0, 'SaltMeat':0, 'Cabbage':0, 'GameMeat':0, 'Fruits':0, 'WhaleMeat':0, 'Oil':0, 'RuneStone':0, 'Hide':0, 'Silverware':0, 'Wool':0, 
                           'Chest':0, 'Linen':0, 'Silk':0, 'SkinAndBones':0, 'Spices':0, 'Fur':0, 'Jewelry':0, 'Robe':0, 'TreasureChest':0, 'Clothing':0, 'SilverHoard':0, 
-                          'Sheep':0, 'PregnantSheep':0, 'Cattle':0, 'PregnantCattle':0, 'Swords':0, 'Bows':0, 'Spears':0, 'Snares':0}
-    
+                          'Sheep':0, 'PregnantSheep':0, 'Cattle':0, 'PregnantCattle':0, 'Sword':0, 'Bow':0, 'Spear':0, 'Snare':0}
+
+        self.feastTable = ['F','F','F','F','F','F']  
+        self.feastPlacedTiles = []
         
 class PlayerBoard():
     def __init__(self):
         self.income = 0
         self.bonuses = []
-        # Tile definitions: X = not placable, F = free, P = free -1 point, O = occupied, B<resource> = bonus resource, I<number> = income added from occupying
+        # Tile definitions: X = not placable, F = free, P = free -1 point, B<resource> = bonus resource, I<number> = income added from occupying, O<color> = occupied by color
         # Tiles are arranged by rows from bottom to top 
         self.tiles = [['I1','F','F','F','F','F','F','P','X','X','X','X','X'],
                       ['F','I1','F','F','F','BStone','F','P','P','P','P','P','X'],
