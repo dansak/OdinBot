@@ -56,4 +56,7 @@ game.players[0].feastTable[3][0] = 'Silver'
 
 print('\nPossible Feast Placements:')
 game.determineValidFeastPlacement(game.players[0])
+
+print('\nPossible House Placements:')
+game.determineValidHousePlacement(game.players[0])
 #%%
