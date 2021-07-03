@@ -1,7 +1,7 @@
 from Odin import *
 
 
-game = Game(nPlayers = 1, occupationSet = ['A'])
+game = Game(nHumanPlayers = 1, occupationSet = ['A'])
 
 print('\nMountains:')
 print(game.mountains)
@@ -45,3 +45,15 @@ game.explorationPhase()
 
 print('\nAvailable Exploration Boards:')
 print(game.availableExplorationBoards)
+
+print('\nFeast Table:')
+print(game.players[0].feastTable)
+
+print('\nPossible Feast Placements:')
+game.determineValidFeastPlacement(game.players[0])
+
+game.players[0].feastTable[3][0] = 'Silver'
+
+print('\nPossible Feast Placements:')
+game.determineValidFeastPlacement(game.players[0])
+#%%

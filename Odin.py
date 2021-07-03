@@ -3,7 +3,7 @@ import pandas as pd
 import random
 
 class Game():
-    def __init__(self, nHumanPlayers, nBotPlayers, occupationSet = ['A']):
+    def __init__(self, nHumanPlayers = 1, nBotPlayers = 0, occupationSet = ['A']):
         # Available exploration boards and stored silver
         self.availableExplorationBoards = {'Shetland':0,'FaroeIslands':0,'Iceland':0,'Greenland':0} 
         
@@ -274,10 +274,89 @@ class Game():
             player.validActions += 'BuildShed'
             
     def determineValidFeastPlacement(self, player):
-        if 'F' not in player.feastTable:
-            print('Feast Table is already full!')
-        else:
-            possibleOrangeTiles = []
+        # Name possible feast tiles: contains info on length, rotation(H, V, or B), and color (O, R, or B)
+        foodTemplate = [['Peas',2,'H','O'],
+                ['Flax',3,'H','O'],
+                ['Grain',4,'H','O'],
+                ['Cabbage',3,'H','O'],
+                ['Mead',2,'H','R'],
+                ['Stockfish',3,'H','R'],
+                ['SaltMeat',4,'H','R'],
+                ['GameMeat',3,'H','R'],
+                ['Sheep',4,'H','R'],
+                ['PregnantSheep',4,'H','R'],
+                ['Cattle',4,'H','R'],
+                ['PregnantCattle',4,'H','R'],
+                ['Peas',1,'V','O'],
+                ['Flax',1,'V','O'],
+                ['Grain',1,'V','O'],
+                ['Cabbage',2,'V','O'],
+                ['Mead',1,'V','R'],
+                ['Stockfish',1,'V','R'],
+                ['SaltMeat',1,'V','R'],
+                ['GameMeat',2,'V','R'],
+                ['Sheep',2,'V','R'],
+                ['PregnantSheep',2,'V','R'],
+                ['Cattle',3,'V','R'],
+                ['PregnantCattle',3,'V','R'],
+                ['Beans',2,'B','O'],
+                ['Fruits',3,'B','O'],
+                ['Milk',2,'B','R'],
+                ['WhaleMeat',3,'B','R'],
+                ['Silver',1,'B','B']]
+        
+        food = []
+        
+        # Only keep food the player has
+        for i in foodTemplate:
+            if player.resources[i[0]] > 0:
+                food.append(i)
+
+        possiblePlacements = []
+            
+        # Loop through possible orange and red tiles (each rotation inlucded) and loop through each spot
+        for i in range(len(player.feastTable)):                                
+            # First check free feast slots
+            if player.feastTable[i][0] == 'F':                    
+                # Loop through tiles
+                for j in range(len(food)):
+                    validPlacement = True
+                    # Check if there is space. If end of table reached or another tile reached, returns False
+                    for k in range(food[j][1] - 1):
+                        if player.feastTable[i][1] + k + 1 > len(player.feastTable):
+                            validPlacement = False
+                            continue
+                        elif player.feastTable[i + k + 1][0] != 'F':
+                            validPlacement = False
+                            continue
+
+                    
+                    # Next check if either end is same color. First make sure not at either end of table. Don't do to silver (color = B)
+                    if food[j][3] != 'B':
+                        if player.feastTable[i][1] != 1:
+                            if player.feastTable[i - 1][3] == food[j][3]:
+                                validPlacement = False
+                                continue
+                            
+                        if player.feastTable[i][1] < len(player.feastTable) - food[j][1]:
+                            if player.feastTable[i + food[j][1]][3] == food[j][3]:
+                                validPlacement = False
+                                continue
+                           
+                    # Next check if using horizontal rotaion, if that food has already been used
+                    if food[j][2] == 'H':
+                        # Loop through each Feast Table slot
+                        for k in range(len(player.feastTable)):
+                            if player.feastTable[k][0] == food[j][0]:
+                                validPlacement = False
+                                continue
+                            
+                    if validPlacement == True:
+                        possiblePlacements.append([food[j][0], player.feastTable[i][1], food[j][2]])
+            
+        print(len(possiblePlacements))
+        print(possiblePlacements)
+                
 
     def buildShed(self, player):
         if player.endedTurn:
@@ -316,8 +395,13 @@ class Player():
                           'Chest':0, 'Linen':0, 'Silk':0, 'SkinAndBones':0, 'Spices':0, 'Fur':0, 'Jewelry':0, 'Robe':0, 'TreasureChest':0, 'Clothing':0, 'SilverHoard':0, 
                           'Sheep':0, 'PregnantSheep':0, 'Cattle':0, 'PregnantCattle':0, 'Sword':0, 'Bow':0, 'Spear':0, 'Snare':0}
 
-        self.feastTable = ['F','F','F','F','F','F']  
-        self.feastPlacedTiles = []
+        # FeastTable slot have Free (F) or occupied (name of tile); slot number; rotation horizontal (H), vertical (V), or both (B); and color Red (R), Orange (O), or Blue (B)
+        self.feastTable = [['F',1,'B','B'],
+                           ['F',2,'B','B'],
+                           ['F',3,'B','B'],
+                           ['F',4,'B','B'],
+                           ['F',5,'B','B'],
+                           ['F',6,'B','B']]
         
 class PlayerBoard():
     def __init__(self):
