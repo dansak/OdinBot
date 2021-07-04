@@ -14,10 +14,10 @@ print(game.players[0].resources['Silver'])
 print('\nP1 Peas:')
 print(game.players[0].resources['Peas'])
 
-game.buildShed(game.players[0])
+#game.buildShed(game.players[0])
 
-print('\nShed Points:')
-print(game.players[0].houses[0].points)
+#print('\nShed Points:')
+#print(game.players[0].houses[0].points)
 
 print('\nAvailable Exploration Boards:')
 print(game.availableExplorationBoards)
@@ -55,8 +55,36 @@ game.determineValidFeastPlacement(game.players[0])
 game.players[0].feastTable[3][0] = 'Silver'
 
 print('\nPossible Feast Placements:')
-game.determineValidFeastPlacement(game.players[0])
+print(len(game.determineValidFeastPlacement(game.players[0])))
+print(game.determineValidFeastPlacement(game.players[0]))
+
+#print('\nPossible House Placements:')
+#print(len(game.determineValidHousePlacement(game.players[0])))
+#print(game.determineValidHousePlacement(game.players[0]))
+
+game.players[0].houses.append(House(0, 'Shed'))
+game.players[0].houses.append(House(1, 'StoneHouse'))
+game.players[0].resources['GlassBeads'] += 1
+game.players[0].resources['Spices'] += 1
 
 print('\nPossible House Placements:')
-game.determineValidHousePlacement(game.players[0])
+print(len(game.determineValidHousePlacement(game.players[0])))
+print(game.determineValidHousePlacement(game.players[0]))
+
+game.placeHouseTile(player=game.players[0], ID=1, color='O', coords=[[0,2],[1,2]])
+print(game.players[0].houses[1].tiles)
+
+print('\nPossible House Placements:')
+print(len(game.determineValidHousePlacement(game.players[0])))
+print(game.determineValidHousePlacement(game.players[0]))
+temp = game.determineValidHousePlacement(game.players[0])
+
+for i in temp:
+    if i[0] == 'Flax':
+        print(i)
+        
+for i in temp:
+    if i[0] == 'Mead':
+        print(i)
+
 #%%
