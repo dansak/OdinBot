@@ -7,9 +7,6 @@ class Game():
         # Available exploration boards and stored silver
         self.availableExplorationBoards = {'Shetland':0,'FaroeIslands':0,'Iceland':0,'Greenland':0} 
         
-        # Available houses
-        self.houses = []
-        
         # Available Sepcial Tiles
         self.availableSpecialTiles = ['GlassBeads','Helmet','Cloakpin','Belt','Crucifix','DrinkingHorn','AmberFigure','Horesshoe','GoldBrooch','ForgeHammer','Fibula','ThrowingAxe','Chalice','RoundShield','EnglishCrown'] # Available special tiles
         
@@ -92,7 +89,19 @@ class Game():
                                               'BirkaSettler','Storeman','SpiceMerchant2','Clerk','Quartermaster','ForestBlacksmith','Sledger',
                                               'SympatheticSoul','Patron','SailPatcher','LootHunter','OilSeller','EarlofLade','FlaxFarmer','SnareSpecialist',
                                               'WharfOwner','Host','Hornblower','Mineworker','Fighter']
-                
+         
+        # List all possible upgrades (single, double, others??)
+        self.availableUpgrades = {'Peas':['Mead','Oil'],
+                                  'Flax':['Stockfish','Hide'],
+                                  'Beans':['Milk','Wool'],
+                                  'Grain':['SaltMeat','Linen'],
+                                  'Cabbage':['GameMeat','SkinAndBones'],
+                                  'Fruits':['WhaleMeat','Robe'],
+                                  'Mead':['Oil','Runestone'],
+                                  'Stockfish':['Hide','Silverware'],
+                                  'Milk':['Wool','Chest'],
+                                  'GameMeat':['Linen','Silk']}
+        
         # Draw each player a starting occupation card and starting weapons
         for i in self.players:
             i.occupations.append(self.availableStartingOccupations.pop(random.randint(0, len(self.availableStartingOccupations) - 1)))
@@ -272,14 +281,259 @@ class Game():
         for i in coords:
             player.houses[ID].tiles[i[1]][i[0]] = 'O' + color
     
-    def determineValidActions(self, player, action):
-        player.validActions = []
-        if player.resources['Wood'] >= 2 and 'Shed' in self.availableHouses:
-            player.validActions += 'BuildShed'
+    # Returns list of all possible actions
+    def determineValidActions(self, player):
+        # List of valid actions. First value of each list is name of action followed by list of variations of that action
+        validActions = []
+        
+        # Add all board placements (expansion and main)
+        validBoardPlacements = self.determineValidBoardPlacement(player)
+        if len(validBoardPlacements) > 0:
+            validActions.append(['BoardPlacements',validBoardPlacements])
+         
+        # Add all feast placements
+        validFeastPlacements = self.determineValidFeastPlacement(player)
+        if len(validFeastPlacements) > 0:
+            validActions.append(['FeastPlacements',validFeastPlacements])
+        
+        # Add all house placements                
+        validHousePlacements = self.determineValidHousePlacement(player)
+        if len(validHousePlacements) > 0:
+            validActions.append(['HousePlacements',validFeastPlacements])
+        
+        # 1 viking actions
+        if player.vikings >= 1:
+            # Build Shed
+            if player.resources['Wood'] >= 2 and 'Shed' in self.availableHouses:
+                validActions.append('BuildShed',['BuildShed'])
+            
+            # Build Whaling Boat
+            if player.resources['Wood'] >= 1 and player.whalingBoats < 3:
+                validActions.append('BuildWhalingBoat',['BuildWhalingBoat'])
+                
+            # Hunting Game 1
+            validActions.append('HuntingGame1',['HuntingGame1'])
+            
+            # Hunt Stockfish
+            validActions.append('HuntStockfish'['HuntStockfish'])
+            
+            # Buy Stockfish
+            if player.resources['Silver'] >= 1:
+                validActions.append('BuyStockfish',['BuyStockfish'])
+                
+            # Buy SaltMeat
+            if player.resources['Silver'] >= 2:
+                validActions.append('BuySaltMeat',['BuySaltMeat'])
+            
+            # Weekly Market 1
+            validActions.append('WeeklyMarket1',['WeeklyMarket1'])
+            
+            # Products 1
+            if player.resources['Cattle'] + player.resources['PregnantCattle'] >= 1:
+                validActions.append('Products1',['Products1'])
+                
+            # Craft Linen
+            if player.resources['Flax'] >= 1:
+                validActions.append('CraftLinen'['CraftLinen'])
+                
+            # Craft Runestone
+            if player.resources['Stone'] >= 1:
+                validActions.append('CraftRunestone',['CraftRunestone'])
+                
+            # Mountain take two (1 or 2)
+            for i in range(self.mountains):
+                if len(self.mountains(i)) >= 1:
+                    validActions.append('MountainTakeTwo',[i, 1])
+                if len(self.mountains(i)) >= 2:
+                    validActions.append('MountainTakeTwo',[i, 2])
+                
+            # Mountain take 1 and upgrade (take 1, upgrade 1, or both)
+            for i in range(self.mountains):
+                for j in player.resources
+                if len(self.mountains(i)) >= 1:
+                    
+        
+        return validActions
+        
          
     # Returns list of possible board (main and exploration) placements
-#    def determineValidBoardPlacement(self, player):
-#        tileTemplate
+    def determineValidBoardPlacement(self, player):
+        # Name possible tiles: contains info on length; width; missing spots [X,Y]; rotations horizontal, left, upsidedown or right(H, L, U, or R); flipped (True or False); and colors (O, R, G, or B)
+        tileTemplate = [['Oil',2,1,[],'H',False,'G'],
+                        ['Oil',1,2,[],'L',False,'G'],
+                        ['Hide',3,1,[],'H',False,'G'],
+                        ['Hide',1,3,[],'L',False,'G'],
+                        ['Linen',4,1,[],'H',False,'G'],
+                        ['Linen',1,4,[],'L',False,'G'],
+                        ['SkinAndBones',3,2,[],'H',False,'G'],
+                        ['SkinAndBones',2,3,[],'L',False,'G'],
+                        ['Fur',4,2,[],'H',False,'G'],
+                        ['Fur',2,4,[],'L',False,'G'],
+                        ['Clothing',4,3,[],'H',False,'G'],
+                        ['Clothing',3,4,[],'L',False,'G'],
+                        ['Wool',2,2,[],'H',False,'G'],
+                        ['Robe',3,3,[],'H',False,'G'],
+                        ['Runestone',2,1,[],'H',False,'B'],
+                        ['Runestone',1,2,[],'L',False,'B'],
+                        ['Silverware',3,1,[],'H',False,'B'],
+                        ['Silverware',1,3,[],'L',False,'B'],
+                        ['Silk',4,1,[],'H',False,'B'],
+                        ['Silk',1,4,[],'L',False,'B'],
+                        ['Spices',3,2,[],'H',False,'B'],
+                        ['Spices',2,3,[],'L',False,'B'],
+                        ['Jewelry',4,2,[],'H',False,'B'],
+                        ['Jewelry',2,4,[],'L',False,'B'],
+                        ['SilverHoard',4,3,[],'H',False,'B'],
+                        ['SilverHoard',3,4,[],'L',False,'B'],
+                        ['Chest',2,2,[],'H',False,'B'],
+                        ['TreasureChest',3,3,[],'H',False,'B'],
+                        ['Silver',1,1,[],'H',False,'B'],
+                        ['Ore',1,1,[],'H',False,'B'],
+                        ['GlassBeads',3,3,[[0,0],[2,0],[0,2],[2,2]],'H',False,'B'],
+                        ['Helmet',2,3,[[1,0]],'H',False,'B'],
+                        ['Helmet',3,2,[[2,1]],'L',False,'B'],
+                        ['Helmet',2,3,[[0,2]],'U',False,'B'],
+                        ['Helmet',3,2,[[0,0]],'R',False,'B'],
+                        ['Helmet',2,3,[[0,0]],'H',True,'B'],
+                        ['Helmet',3,2,[[2,0]],'L',True,'B'],
+                        ['Helmet',2,3,[[1,2]],'U',True,'B'],
+                        ['Helmet',3,2,[[0,1]],'R',True,'B'],
+                        ['Cloakpin',4,2,[[1,1],[2,1],[3,1]],'H',False,'B'],
+                        ['Cloakpin',2,4,[[0,1],[0,2],[0,3]],'L',False,'B'],
+                        ['Cloakpin',4,2,[[0,0],[0,1],[0,2]],'U',False,'B'],
+                        ['Cloakpin',2,4,[[1,0],[1,1],[1,2]],'R',False,'B'],
+                        ['Cloakpin',4,2,[[0,1],[1,1],[2,1]],'H',True,'B'],
+                        ['Cloakpin',2,4,[[0,0],[0,1],[0,2]],'L',True,'B'],
+                        ['Cloakpin',4,2,[[0,1],[0,2],[0,3]],'U',True,'B'],
+                        ['Cloakpin',2,4,[[1,1],[1,2],[1,3]],'R',True,'B'],
+                        ['Belt',5,1,[],'H',False,'B'],
+                        ['Belt',1,5,[],'L',False,'B'],
+                        ['Crucifix',3,4,[[0,0],[0,1],[0,3],[2,0],[2,1],[2,3]],'H',False,'B'],
+                        ['Crucifix',4,3,[[0,0],[0,2],[2,0],[2,2],[3,0],[3,2]],'L',False,'B'],
+                        ['Crucifix',3,4,[[0,0],[0,2],[0,3],[2,0],[2,2],[2,3]],'U',False,'B'],
+                        ['Crucifix',4,3,[[0,0],[0,2],[1,0],[1,2],[3,0],[3,2]],'R',False,'B'],
+                        ['DrinkingHorn',3,3,[[0,2],[1,0],[2,0]],'H',False,'B'],
+                        ['DrinkingHorn',3,3,[[0,0],[2,1],[2,2]],'L',False,'B'],
+                        ['DrinkingHorn',3,3,[[0,2],[1,2],[2,0]],'U',False,'B'],
+                        ['DrinkingHorn',3,3,[[0,0],[0,1],[2,2]],'R',False,'B'],
+                        ['DrinkingHorn',3,3,[[0,0],[0,1],[2,2]],'H',True,'B'],
+                        ['DrinkingHorn',3,3,[[0,2],[2,0],[2,1]],'L',True,'B'],
+                        ['DrinkingHorn',3,3,[[0,0],[1,2],[2,2]],'U',True,'B'],
+                        ['DrinkingHorn',3,3,[[0,1],[0,2],[2,0]],'R',True,'B'],
+                        ['AmberFigure',3,3,[[0,2],[2,2]],'H',False,'B'],
+                        ['AmberFigure',3,3,[[0,0],[0,2]],'R',False,'B'],
+                        ['AmberFigure',3,3,[[0,0],[2,0]],'U',False,'B'],
+                        ['AmberFigure',3,3,[[2,0],[2,2]],'L',False,'B'],
+                        ['Horseshoe',3,3,[[1,1],[1,2]],'H',False,'B'],
+                        ['Horseshoe',3,3,[[0,1],[1,1]],'L',False,'B'],
+                        ['Horseshoe',3,3,[[1,0],[1,1]],'U',False,'B'],
+                        ['Horseshoe',3,3,[[1,1],[2,1]],'R',False,'B'],
+                        ['GoldBrooch',3,4,[[0,0],[0,3],[2,0],[2,3]],'H',False,'B'],
+                        ['GoldBrooch',4,3,[[0,0],[0,2],[3,0],[3,2]],'L',False,'B'],
+                        ['Fibula',3,5,[[1,1],[1,3],[2,0],[2,1],[2,3],[2,4]],'H',False,'B'],
+                        ['Fibula',5,3,[[0,2],[1,1],[1,2],[3,1],[3,2],[4,2]],'L',False,'B'],
+                        ['Fibula',3,5,[[0,0],[0,1],[0,3],[0,4],[1,1],[1,3]],'U',False,'B'],
+                        ['Fibula',5,3,[[0,0],[1,0],[1,1],[3,0],[3,1],[4,0]],'R',False,'B'],
+                        ['ThrowingAxe',5,3,[[0,0],[0,1],[1,0],[3,0],[4,0],[4,1]],'H',False,'B'],
+                        ['ThrowingAxe',3,5,[[1,0],[1,4],[2,0],[2,1],[2,3],[2,4]],'L',False,'B'],
+                        ['ThrowingAxe',5,3,[[0,1],[0,2],[1,2],[3,2],[4,1],[4,2]],'U',False,'B'],
+                        ['ThrowingAxe',3,5,[[0,0],[0,1],[0,3],[0,4],[1,0],[1,4]],'R',False,'B'],
+                        ['ForgeHammer',3,5,[[0,0],[0,1],[0,2],[2,0],[2,1],[2,2]],'H',False,'B'],
+                        ['ForgeHammer',5,3,[[2,0],[2,2],[3,0],[3,2],[4,0],[4,2]],'L',False,'B'],
+                        ['ForgeHammer',3,5,[[0,2],[0,3],[0,4],[2,2],[2,3],[2,4]],'U',False,'B'],
+                        ['ForgeHammer',5,3,[[0,0],[0,2],[1,0],[1,2],[2,0],[2,2]],'R',False,'B'],
+                        ['Chalice',3,4,[[0,1],[2,1]],'H',False,'B'],
+                        ['Chalice',4,3,[[2,0],[2,2]],'L',False,'B'],
+                        ['Chalice',3,4,[[0,2],[2,2]],'U',False,'B'],
+                        ['Chalice',4,3,[[1,0],[1,2]],'R',False,'B'],
+                        ['RoundShield',4,4,[[0,0],[0,3],[3,0],[3,3]],'H',False,'B'],
+                        ['EnglishCrown',5,3,[[1,2],[3,2]],'H',False,'B'],
+                        ['EnglishCrown',3,5,[[0,1],[0,3]],'L',False,'B'],
+                        ['EnglishCrown',5,3,[[1,0],[3,0]],'U',False,'B'],
+                        ['EnglishCrown',3,5,[[2,1],[2,3]],'R',False,'B']]      
+                    
+        tile = []
+        
+        # Only keep tile the player has
+        for i in tileTemplate:
+            if player.resources[i[0]] > 0:
+                tile.append(i)
+
+        possiblePlacements = []
+        
+        # Loop through each house, spot, and tile
+        for i in [player.playerBoard] + player.expBoards:               
+            # Loop through board length
+            for j in range(len(i.tiles[0])):
+                # Loop through board height
+                for k in range(len(i.tiles)):                        
+                    # Loop through each tile
+                    for l in range(len(tile)):   
+                        # Check if spot is free, Bonus, or Income
+                        if i.tiles[k][j] in ['F','P'] or i.tiles[k][j][0:5] == 'Bonus' or i.tiles[k][j][0:6] == 'Income' or [0,0] in tile[l][3]:
+                            validPlacement = True   
+                            # Loop through length of tile
+                            for m in range(tile[l][1]):
+                                # Loop through height of tile
+                                for n in range(tile[l][2]):
+                                    # Check if its on the board
+                                    if len(i.tiles[0]) <= j + m or len(i.tiles) <= k + n:
+                                        validPlacement = False
+                                        continue
+                                    
+                                    # Reject if spot is not free or Bonus. Include special tile logic
+                                    if i.tiles[k + n][j + m] not in ['F','P'] and i.tiles[k + n][j + m][0:5] != 'Bonus' and i.tiles[k + n][j + m][0:6] != 'Income' and [m, n] not in tile[l][3]: 
+                                        validPlacement = False
+                                        continue
+                                    
+                                    # Checks for greens
+                                    if tile[l][6] == 'G':
+                                        # If at left of tile
+                                        if m == 0 and j + m != 0:
+                                            if i.tiles[k + n][j + m - 1] == 'OG':
+                                                validPlacement = False
+                                                continue
+                                            
+                                        # If at right of tile
+                                        if m == tile[l][1] - 1 and j + m != len(i.tiles[0]) - 1:
+                                            if i.tiles[k + n][j + m  + 1] == 'OG':
+                                                validPlacement = False
+                                                continue 
+                                            
+                                        # If at top of tile
+                                        if n == tile[l][2] - 1 and k + n != len(i.tiles) - 1:
+                                            if i.tiles[k + n + 1][j + m ] == 'OG':
+                                                validPlacement = False
+                                                continue    
+                                            
+                                        # If at bottom of tile
+                                        if n == 0 and k + n != 0:
+                                            if i.tiles[k + n - 1][j + m ] == 'OG':
+                                                validPlacement = False
+                                                continue
+                                                                        
+                                    # Check for valid income by checking if every spot below and to left of income is filled or being filled
+                                    if i.tiles[k + n][j + m][0:6] == 'Income':
+                                        # Loop through left of income
+                                        for o in range(j + m + 1):
+                                            # Loop through bottom of income
+                                            for p in range(k + n + 1):
+                                                # Check if tile is not free or if not occupied                                                                                                
+                                                if (i.tiles[p][o] in ['F','P'] or i.tiles[p][o][0:6] == 'Income') and not (o < j + tile[l][1] and o >= j and p < k + tile[l][2] and p >= k and [o - j, p - k] not in tile[l][3]):
+                                                    validPlacement = False
+                                                    break       
+                                            # Quit loop if already failed    
+                                            if validPlacement == False:
+                                                break
+                                                
+                                # Quit loop if already failed    
+                                if validPlacement == False:
+                                    break
+                                    
+                            if validPlacement:
+                                possiblePlacements.append([tile[l][0], i.name, j, k, tile[l][4], tile[l][5], tile[l][6]])
+                               
+        return possiblePlacements
     
     def determineValidHousePlacement(self, player):
         # Name possible tiles: contains info on length; width; missing spots [X,Y]; rotations horizontal, left, upsidedown or right(H, L, U, or R); flipped (True or False); and colors (O, R, G, or B)
@@ -416,8 +670,6 @@ class Game():
                                     
                                     # Checks for reds/oranges
                                     if tile[l][6] == 'O':
-                                        print([tile[l][0], i.houseType, i.ID, j, k, tile[l][4], tile[l][5], tile[l][6], m, n])
-                                        print(i.tiles[k + n][j + m - 1])
                                         # If at left of tile
                                         if m == 0 and j + m != 0:
                                             if i.tiles[k + n][j + m - 1] == 'OO':
@@ -471,7 +723,7 @@ class Game():
                                     continue
                                     
                             if validPlacement:
-                                possiblePlacements.append([tile[l][0], i.houseType, i.ID, j, k, tile[l][4], tile[l][5], tile[l][6]])
+                                possiblePlacements.append([tile[l][0], i.ID, j, k, tile[l][4], tile[l][5], tile[l][6]])
                                
         return possiblePlacements
         
@@ -611,35 +863,37 @@ class Player():
         
 class PlayerBoard():
     def __init__(self):
+        self.name = 'PlayerBoard'
         self.income = 0
         self.bonuses = []
         # Tile definitions: X = not placable, F = free, P = free -1 point, B<resource> = bonus resource, I<number> = income added from occupying, O<color> = occupied by color
         # Tiles are arranged by rows from bottom to top 
-        self.tiles = [['I1','F','F','F','F','F','F','P','X','X','X','X','X'],
-                      ['F','I1','F','F','F','BonusStone','F','P','P','P','P','P','X'],
-                      ['F','BonusMead','F','F','F','F','F','P','P','P','P','P','X'],
-                      ['F','F','F','I1','F','F','F','P','P','P','P','P','X'],
-                      ['F','F','BonusWood','F','I1','F','BonusRuneStone','P','P','P','P','P'],
-                      ['F','F','F','F','F','I1','F','P','P','P','P','P','X'],
-                      ['BonusOre','F','F','F','F','F','I1','P','P','P','P','P','X'],
-                      ['P','P','P','P','P','P','P','I1','P','P','P','P','X'],
-                      ['P','P','P','P','P','P','P','P','I2','P','P','P','X'],
-                      ['P','P','P','P','P','P','P','P','P','I3','P','P','F'],
-                      ['P','P','P','P','P','P','P','P','P','P','I3','P','F'],
-                      ['P','P','P','P','P','P','P','P','P','P','P','I3','F']]
+        self.tiles = [['Income1','F','F','F','F','F','F','P','X','X','X','X','X'],
+                      ['F','Income1','F','F','F','BonusStone','F','P','P','P','P','P','X'],
+                      ['F','BonusMead','Income0','F','F','F','F','P','P','P','P','P','X'],
+                      ['F','F','F','Income1','F','F','F','P','P','P','P','P','X'],
+                      ['F','F','BonusWood','F','Income1','F','BonusRuneStone','P','P','P','P','P','X'],
+                      ['F','F','F','F','F','Income1','F','P','P','P','P','P','X'],
+                      ['BonusOre','F','F','F','F','F','Income1','P','P','P','P','P','X'],
+                      ['P','P','P','P','P','P','P','Income1','P','P','P','P','X'],
+                      ['P','P','P','P','P','P','P','P','Income2','P','P','P','X'],
+                      ['P','P','P','P','P','P','P','P','P','Income3','P','P','F'],
+                      ['P','P','P','P','P','P','P','P','P','P','Income3','P','F'],
+                      ['P','P','P','P','P','P','P','P','P','P','P','Income3','F']]
         
 class ExpBoard():
     def __init__(self, expType):
         self.storedSilver = 0
+        self.name = expType
         # Tile definitions: X = not placable, F = free, P = free -1 point, O = occupied, B<resource> = bonus resource, I<number> = income added from occupying
         # Tiles are arranged by rows from bottom to top
         if expType == 'Shetland':
             self.income = 0
             self.points = 6
             self.tiles = [['X','F','F','X','X','X','P','P','F'],
-                          ['I1','F','BonusBeans','X','X','X','P','P','P'],
-                          ['F','I1','F','X','F','P','P','P','F','F','F'],
-                          ['F','F','I1','X','P','P','F','BonusCabbage','F'],
+                          ['Income1','F','BonusBeans','X','X','X','P','P','P'],
+                          ['F','Income1','F','X','F','P','P','P','F','F','F'],
+                          ['F','F','Income1','X','P','P','F','BonusCabbage','F'],
                           ['X','X','X','X','P','P','F','F','F'],
                           ['P','P','P','P','F','F','F','Boil','F'],
                           ['P','BonusGameMeat','P','P','F','F','P','P','F'],
@@ -649,36 +903,36 @@ class ExpBoard():
             self.income = 0
             self.points = 4
             self.tiles = [['X','X','X','X','X','F','F','P'],
-                          ['F','F','F','F','X','F','BonusHide','P'],
-                          ['BonusPeas','I1','F','F','X','F','F','P'],
-                          ['F','F','F','X','F','BonusFlax','P','P','X'],
-                          ['X','X','X','I1','F','F','P','X','F'],
-                          ['X','F','F','F','F','P','P','P','P'],
-                          ['X','P','BonusOil','F','F','F','X','F','BonusMilk'],
-                          ['X','X','P','P','X','X','I1','F','P'],
-                          ['X','X','X','X','X','P','BonusSheep','I1','P']]
+                          ['Income1','F','F','F','X','F','BonusHide','P'],
+                          ['BonusPeas','Income0','F','F','X','F','F','P'],
+                          ['F','F','Income0','X','F','BonusFlax','P','P','X'],
+                          ['X','X','X','Income1','F','F','P','X','F'],
+                          ['X','F','F','F','Income0','P','P','P','P'],
+                          ['X','P','BonusOil','F','F','Income0','X','F','BonusMilk'],
+                          ['X','X','P','P','X','X','Income1','F','P'],
+                          ['X','X','X','X','X','P','BonusSheep','Income1','P']]
         elif expType == 'Iceland':
             self.income = 1
             self.points = 16
             self.tiles = [['X','X','P','P','F','X','X','X'],
-                          ['F','I1','P','P','F','BonusOreStone','F','X'],
-                          ['F','F','I1','P','F','F','F','P'],
-                          ['BonusOil','F','F','I1','P','P','P','P'],
-                          ['F','F','F','F','I1','P','P','P','P'],
-                          ['X','F','BonusStockfish','F','P','I1','P','P'],
-                          ['P','F','X','F','P','P','I1','P'],
-                          ['F','P','X','P','F','P','P','I1']]
+                          ['F','Income1','P','P','F','BonusOreStone','F','X'],
+                          ['F','F','Income1','P','F','F','F','P'],
+                          ['BonusOil','F','F','Income1','P','P','P','P'],
+                          ['F','F','F','F','Income1','P','P','P','P'],
+                          ['X','F','BonusStockfish','F','P','Income1','P','P'],
+                          ['P','F','X','F','P','P','Income1','P'],
+                          ['F','P','X','P','F','P','P','Income1']]
         elif expType == 'Greenland':
             self.income = 0
             self.points = 12
             self.tiles = [['X','X','X','X','F','F','F','X'],
-                          ['X','X','F','I1','F','F','F','X'],
-                          ['X','P','P','P','I1','X','F','BonusStockfish'],
-                          ['F','P','F','P','P','I1','F','F'],
-                          ['F','F','F','P','P','P','I1','X'],
-                          ['F','bWhaleMeat','F','I1','P','P','P','I1'],
-                          ['F','F','F','X','I1','P','P','P'],
-                          ['P','P','P','F','F','I1','P','P']]
+                          ['X','X','F','Income1','F','F','F','X'],
+                          ['X','P','P','P','Income1','X','F','BonusStockfish'],
+                          ['F','P','F','P','P','Income1','F','F'],
+                          ['F','F','F','P','P','P','Income1','X'],
+                          ['F','bWhaleMeat','F','Income1','P','P','P','Income1'],
+                          ['F','F','F','X','Income1','P','P','P'],
+                          ['P','P','P','F','F','Income1','P','P']]
         elif expType == 'BearIsland':
             self.income = 1
             self.points = 12
@@ -686,19 +940,19 @@ class ExpBoard():
                           ['X','X','X','F','P','F','F','X'],
                           ['X','F','F','F','F','F','BRuneStoneStone','X'],
                           ['X','F','F','F','F','F','P','P','X'],
-                          ['X','I2','X','F','F','P','F','BonusStockfish'],
-                          ['F','F','I1','F','BonusGameMeat','F','P','F'],
-                          ['P','P','P','I1','F','P','F','P'],
+                          ['X','Income2','X','F','F','P','F','BonusStockfish'],
+                          ['F','F','Income1','F','BonusGameMeat','F','P','F'],
+                          ['P','P','P','Income1','F','P','F','P'],
                           ['X','P','P','P','X','P','P','P'],
                           ['X','X','X','P','P','P','P','X']]
         elif expType == 'BaffinIsland':
             self.income = 0
             self.points = 12
             self.tiles = [['F','F','F','X','P','F','BonusSkinAndBones','F','P'],
-                          ['F','I1','F','F','P','F','F','X','X'],
+                          ['F','Income1','F','F','P','F','F','X','X'],
                           ['X','F','F','F','P','P','X','X','X'],
-                          ['F','F','F','I2','P','P','P','Boil','P'],
-                          ['X','F','F','F','I2','P','P','X','X'],
+                          ['F','F','F','Income2','P','P','P','Boil','P'],
+                          ['X','F','F','F','Income2','P','P','X','X'],
                           ['X','P','X','P','F','X','X','X','F'],
                           ['X','F','P','F','P','P','F','BonusWhaleMeat','F'],
                           ['P','P','F','P','P','P','F','F','F'],
