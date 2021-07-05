@@ -6,8 +6,9 @@ class Game():
         # Available exploration boards and stored silver
         self.availableExplorationBoards = {'Shetland':0,'FaroeIslands':0,'Iceland':0,'Greenland':0} 
         
-        # Available Sepcial Tiles
-        self.availableSpecialTiles = ['GlassBeads','Helmet','Cloakpin','Belt','Crucifix','DrinkingHorn','AmberFigure','Horesshoe','GoldBrooch','ForgeHammer','Fibula','ThrowingAxe','Chalice','RoundShield','EnglishCrown'] # Available special tiles
+        # Available Sepcial Tiles and their silver cost
+        self.availableSpecialTiles = {'GlassBeads':0,'Helmet':1,'Cloakpin':1,'Belt':2,'Crucifix':2,'DrinkingHorn':2,'AmberFigure':2,
+                                      'Horesshoe':2,'GoldBrooch':3,'ForgeHammer':4,'Fibula':4,'ThrowingAxe':4,'Chalice':5,'RoundShield':6,'EnglishCrown':9999}
         
         # Available mountains
         self.availableMountains = [['W','W','W','W','S','S','S2'],
@@ -35,7 +36,7 @@ class Game():
                                  'UpgradeThree','UpgradeGreensTwo','PillagingOne','ExplorationTwo','EmigrateOne','PlayOccupationsTwo','BuildLongHouse','BuildLongship','WhalingOne','BuySheepOrCattle',
                                  'WeeklyMarketThree','ProductsThree','CraftSpecial','CraftChestRunestone','MountainThreeTwo','UpgradeThreeWeapons','UpgradeFour','BuySpecials','PillagingTwo',
                                  'ExplorationThree','EmigrateTwo','PlayOccupationsThree','BuildHouseBoat','WhalingTwo','BuySheepAndCattle','WeeklyMarketFour','CraftingRoberSilverware',
-                                 'MountainFourUpgradeTwoTwice','MountainTwoFourOrUpgradeThreeTwice','Plundering','EmigrateThree']
+                                 'MountainFourUpgradeTwoTwice','MountainOrUpgrade','Plundering','EmigrateThree']
         
         # Available anytime actions
         self.availableAnytimeActions = ['PlaceFeast','PlaceTile','BuyBoat','Arming']
@@ -336,241 +337,604 @@ class Game():
         # Add all board placements (expansion and main)
         validBoardPlacements = self.determineValidBoardPlacement(player)
         if len(validBoardPlacements) > 0:
-            validActions.append(['BoardPlacements',validBoardPlacements])
+            validActions += validBoardPlacements
          
         # Add all feast placements
         validFeastPlacements = self.determineValidFeastPlacement(player)
         if len(validFeastPlacements) > 0:
-            validActions.append(['FeastPlacements',validFeastPlacements])
+            validActions += validFeastPlacements
         
         # Add all house placements                
         validHousePlacements = self.determineValidHousePlacement(player)
         if len(validHousePlacements) > 0:
-            validActions.append(['HousePlacements',validHousePlacements])
-        
-        # 1 viking actions
-        if player.vikings >= 1:
-            # Build Shed
-            if player.resources['Wood'] >= 2 and 'Shed' in self.availableHouses and 'BuildShed' in self.availableActions:
-                validActions.append('BuildShed',['BuildShed'])
+            validActions += validHousePlacements            
             
-            # Build Whaling Boat
-            if player.resources['Wood'] >= 1 and player.whalingBoats < 3 and 'BuildWhalingBoat' in self.availableActions:
-                validActions.append('BuildWhalingBoat',['BuildWhalingBoat'])
-                
-            # Hunting Game 1
-            if 'HuntingGameOne' in self.availableActions:
-                validActions.append(['HuntingGameOne',['HuntingGameOne']])
+        # Option to completely end turn for the round
+        validActions.append(['EndTurn',['EndTurn']])
             
-            # Hunt Stockfish
-            if 'HuntStockfish' in self.availableActions:
-                validActions.append(['HuntStockfish',['HuntStockfish']])
-            
-            # Buy Stockfish
-            if player.resources['Silver'] >= 1 and 'BuyStockfish' in self.availableActions:
-                validActions.append(['BuyStockfish',['BuyStockfish']])
+        # Option to pass the turn to next player. Otherwise can play action
+        if player.madeAction:
+            validActions.append(['PassTurn',['PassTurn']])
+        else:        
+            # One viking actions
+            if player.vikings >= 1:
+                # Build Shed
+                if player.resources['Wood'] >= 2 and 'Shed' in self.availableHouses and 'BuildShed' in self.availableActions:
+                    validActions.append('BuildShed',['BuildShed'])
                 
-            # Buy SaltMeat
-            if player.resources['Silver'] >= 2 and 'BuySaltMeat' in self.availableActions:
-                validActions.append(['BuySaltMeat',['BuySaltMeat']])
-            
-            # Weekly Market 1
-            if 'WeeklyMarketOne' in self.availableActions:
-                validActions.append(['WeeklyMarketOne',['WeeklyMarketOne']])
-            
-            # Products 1
-            if player.resources['Cattle'] + player.resources['PregnantCattle'] >= 1 and 'ProductsOne' in self.availableActions:
-                validActions.append(['ProductsOne',['ProductsOne']])
-                
-            # Craft Linen
-            if player.resources['Flax'] >= 1 and 'CraftLinen' in self.availableActions:
-                validActions.append(['CraftLinen',['CraftLinen']])
-                
-            # Craft Runestone
-            if player.resources['Stone'] >= 1 and 'CraftRunestone' in self.availableActions:
-                validActions.append(['CraftRunestone',['CraftRunestone']])
-                
-            # Mountain take two (1 or 2)
-            if 'MountainTwo' in self.availableActions:
-                for i in range(len(self.mountains)):
-                    if len(self.mountains[i]) >= 1:
-                        validActions.append(['MountainTwo',[i, 1]])
-                    if len(self.mountains[i]) >= 2:
-                        validActions.append(['MountainTwo',[i, 2]])
-                
-            # Mountain take 1 and upgrade (take 1, upgrade 1, or both)
-            # Loop through upgrades
-            if 'MountainOneUpgradeOne' in self.availableActions:
-                for i in self.availableSingleUpgrades:
-                    # Loop through mountains
-                    for j in range(len(self.mountains)):
-                        # If has upgradeable resrouces
-                        if player.resources[i] >= 1:
-                            # If has mountain to take from
-                            if len(self.mountains[j]) >= 1:
-                                validActions.append(['MountainOneUpgradeOne',[j, 1, i]])                            
-                        # Add option to just take 1. This should trigger only once so add on one loop only
-                        if i == 'Clothing' and len(self.mountains[j]) >= 1:
-                            validActions.append(['MountainOneUpgradeOne',[j, 1, 'None']])                        
-                    # Always add option to just upgrade
-                    if player.resources[i] >= 1:
-                        validActions.append(['MountainOneUpgradeOne',[0, 0, i]])
-                
-            # Upgrade two action            
-            if 'UpgradeTwo' in self.availableActions:
-                # List upgradeable resources player has, up to three times
-                upgradeableSingles = []
-                for i in self.availableSingleUpgrades:
-                    if player.resources[i] >= 2:
-                        upgradeableSingles.append(i)
-                    if player.resources[i] >= 1:
-                        upgradeableSingles.append(i)
-                # Create list of two combinations
-                for i in set(list(itertools.combinations(upgradeableSingles, 2))):
-                    validActions.append(['UpgradeTwo',[i[0], i[1]]])
-                # Create list of one combinations
-                for i in set(list(itertools.combinations(upgradeableSingles, 1))):
-                    validActions.append(['UpgradeTwo',[i[0], 'None']])
-            
-            # Upgrade all greens one
-            if 'UpgradeGreensOne' in self.availableActions:
-                validGreenUpgrades = []
-                if len(player.knarrs) >= 1 and player.resources['Silver'] >= 1:
-                    for i in self.availableGreenUpgrades:
-                        # Track all possible green upgrades
-                        if player.resources[i] >= 1:
-                            validGreenUpgrades.append(i)
-                    # Populate list of every possible combination of valid green upgrades
-                    print(validGreenUpgrades)
-                    for i in range(len(validGreenUpgrades) + 1):
-                        for j in itertools.combinations(validGreenUpgrades, i):
-                            validActions.append(['UpgradeGreensOne',list(j)])
-                        
-            # Raiding
-            if len(player.longships) >= 1 and 'Raiding' in self.availableActions:
-                validActions.append(['Raiding',['Raiding']])
-                
-            # Exploration 1
-            if len(player.whalingBoats) + len(player.longships) + len(player.knarrs) >= 1 and 'TakeOccupation' in self.availableActions:
-                if 'Shetland' in self.availableExplorationBoards:
-                    validActions.append('ExplorationOne',['Shetland'])
-                if 'FaroeIslands' in self.availableExplorationBoards:
-                    validActions.append('ExplorationOne',['FaroeIslands'])
+                # Build Whaling Boat
+                if player.resources['Wood'] >= 1 and player.whalingBoats < 3 and 'BuildWhalingBoat' in self.availableActions:
+                    validActions.append('BuildWhalingBoat',['BuildWhalingBoat'])
                     
-            # Take Occupation
-            if 'BuildShed' in self.availableActions:
-                validActions.append(['TakeOccupation',['TakeOccupation']])
-            
-            # Play Occupation
-            if player.resources['Stone'] + player.resources['Ore'] >= 1 and 'PlayOccupationOne' in self.availableActions:
-                # Options to play any cards
-                for i in player.occupations:
+                # Hunting Game 1
+                if 'HuntingGameOne' in self.availableActions:
+                    validActions.append(['HuntingGameOne',['HuntingGameOne']])
+                
+                # Hunt Stockfish
+                if 'HuntStockfish' in self.availableActions:
+                    validActions.append(['HuntStockfish',['HuntStockfish']])
+                
+                # Buy Stockfish
+                if player.resources['Silver'] >= 1 and 'BuyStockfish' in self.availableActions:
+                    validActions.append(['BuyStockfish',['BuyStockfish']])
+                    
+                # Buy SaltMeat
+                if player.resources['Silver'] >= 2 and 'BuySaltMeat' in self.availableActions:
+                    validActions.append(['BuySaltMeat',['BuySaltMeat']])
+                
+                # Weekly Market 1
+                if 'WeeklyMarketOne' in self.availableActions:
+                    validActions.append(['WeeklyMarketOne',['WeeklyMarketOne']])
+                
+                # Products 1
+                if player.resources['Cattle'] + player.resources['PregnantCattle'] >= 1 and 'ProductsOne' in self.availableActions:
+                    validActions.append(['ProductsOne',['ProductsOne']])
+                    
+                # Craft Linen
+                if player.resources['Flax'] >= 1 and 'CraftLinen' in self.availableActions:
+                    validActions.append(['CraftLinen',['CraftLinen']])
+                    
+                # Craft Runestone
+                if player.resources['Stone'] >= 1 and 'CraftRunestone' in self.availableActions:
+                    validActions.append(['CraftRunestone',['CraftRunestone']])
+                    
+                # Mountain take two (1 or 2)
+                if 'MountainTwo' in self.availableActions:
+                    for i in range(len(self.mountains)):
+                        if len(self.mountains[i]) >= 1:
+                            validActions.append(['MountainTwo',[i, 1]])
+                        if len(self.mountains[i]) >= 2:
+                            validActions.append(['MountainTwo',[i, 2]])
+                    
+                # Mountain take 1 and upgrade (take 1, upgrade 1, or both)
+                # Loop through upgrades
+                if 'MountainOneUpgradeOne' in self.availableActions:
+                    for i in self.availableSingleUpgrades:
+                        # Loop through mountains
+                        for j in range(len(self.mountains)):
+                            # If has upgradeable resrouces
+                            if player.resources[i] >= 1:
+                                # If has mountain to take from
+                                if len(self.mountains[j]) >= 1:
+                                    validActions.append(['MountainOneUpgradeOne',[j, 1, i]])                            
+                            # Add option to just take 1. This should trigger only once so add on one loop only
+                            if i == 'Clothing' and len(self.mountains[j]) >= 1:
+                                validActions.append(['MountainOneUpgradeOne',[j, 1, 'None']])                        
+                        # Always add option to just upgrade
+                        if player.resources[i] >= 1:
+                            validActions.append(['MountainOneUpgradeOne',[0, 0, i]])
+                    
+                # Upgrade two action            
+                if 'UpgradeTwo' in self.availableActions:
+                    # List upgradeable resources player has, up to three times
+                    upgradeableSingles = []
+                    for i in self.availableSingleUpgrades:
+                        if player.resources[i] >= 2:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 1:
+                            upgradeableSingles.append(i)
+                    # Create list of two combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 2))):
+                        validActions.append(['UpgradeTwo',[i[0], i[1]]])
+                    # Create list of one combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 1))):
+                        validActions.append(['UpgradeTwo',[i[0], 'None']])
+                
+                # Upgrade all greens one
+                if 'UpgradeGreensOne' in self.availableActions:
+                    validGreenUpgrades = []
+                    if len(player.knarrs) >= 1 and player.resources['Silver'] >= 1:
+                        for i in self.availableGreenUpgrades:
+                            # Track all possible green upgrades
+                            if player.resources[i] >= 1:
+                                validGreenUpgrades.append(i)
+                        # Populate list of every possible combination of valid green upgrades
+                        print(validGreenUpgrades)
+                        for i in range(len(validGreenUpgrades) + 1):
+                            for j in itertools.combinations(validGreenUpgrades, i):
+                                validActions.append(['UpgradeGreensOne',list(j)])
+                            
+                # Raiding
+                if len(player.longships) >= 1 and 'Raiding' in self.availableActions:
+                    validActions.append(['Raiding',['Raiding']])
+                    
+                # Exploration 1
+                if len(player.whalingBoats) + len(player.longships) + len(player.knarrs) >= 1 and 'ExplorationOne' in self.availableActions:
+                    if 'Shetland' in self.availableExplorationBoards:
+                        validActions.append('ExplorationOne',['Shetland'])
+                    if 'FaroeIslands' in self.availableExplorationBoards:
+                        validActions.append('ExplorationOne',['FaroeIslands'])
+                        
+                # Take Occupation
+                if 'TakeOccupation' in self.availableActions:
+                    validActions.append(['TakeOccupation',['TakeOccupation']])
+                
+                # Play Occupation
+                if player.resources['Stone'] + player.resources['Ore'] >= 1 and 'PlayOccupationOne' in self.availableActions:
+                    # Options to play any cards
+                    for i in player.occupations:
+                        if player.resources['Stone'] >= 1:
+                            validActions.append(['PlayOccupationOne',['Stone', i]])
+                        if player.resources['Ore'] >= 1:
+                            validActions.append(['PlayOccupationOne',['Ore', i]])
+                    # Options to play no cards
                     if player.resources['Stone'] >= 1:
-                        validActions.append(['PlayOccupationOne',['Stone', i]])
+                        validActions.append(['PlayOccupationOne',['Stone','None']])
                     if player.resources['Ore'] >= 1:
-                        validActions.append(['PlayOccupationOne',['Ore', i]])
-                # Options to play no cards
-                if player.resources['Stone'] >= 1:
-                    validActions.append(['PlayOccupationOne',['Stone','None']])
-                if player.resources['Ore'] >= 1:
-                    validActions.append(['PlayOccupationOne',['Ore','None']])
-        
-        # 2 viking actions            
-        if player.vikings >= 2:
-            # Build StoneHouse
-            if player.resources['Stone'] >= 1 and 'StoneHouse' in self.availableHouses and 'BuildStoneHouse' in self.availableActions:
-                validActions.append(['BuildStoneHouse',['BuildStoneHouse']])
-                
-            # Build Knarr
-            if player.resources['Wood'] >= 2 and len(player.knarrs) + len(player.longships) < 4 and 'BuildKnarr' in self.availableActions:
-                validActions.append(['BuildKnarr',['BuildKnarr']])
-                
-            # Hunting Game two
-            if 'HuntingGameTwo' in self.availableActions:
-                validActions.append(['HuntingGameTwo',['HuntingGameTwo']])
-                
-            # Lay Snare
-            if 'LaySnare' in self.availableActions:
-                validActions.append(['LaySnare',['LaySnare']])
-                
-            # Buy Sheep
-            if player.resources['Silver'] >= 1 and 'BuySheep' in self.availableActions:
-                validActions.append(['BuySheep',['BuySheep']])
-                
-            # Buy Cattle              
-            if player.resources['Silver'] >= 3 and 'BuyCattle' in self.availableActions:
-                validActions.append(['BuyCattle',['BuyCattle']])
-                
-            # Weekly Market two
-            if 'WeeklyMarketTwo' in self.availableActions:
-                validActions.append(['WeeklyMarketTwo',['WeeklyMarketTwo']])
-                        
-            # Products two
-            if 'ProductsTwo' in self.availableActions:
-                validActions.append(['ProductsTwo',['ProductsTwo']])
-                
-            # Make Clothing
-            if player.resources['Hide'] >= 1 and player.resources['Linen'] >= 1 and 'CraftClothing' in self.availableActions:
-                validActions.append(['CraftClothing',['CraftClothing']])
-
-            # Craft chest
-            if player.resources['Wood'] + player.resources['Ore'] >= 1 and 'CraftChest' in self.availableActions:
-                if player.resources['Wood'] >= 1:
-                    validActions.append(['CraftChest',['Wood']])                
-                if player.resources['Ore'] >= 1:
-                    validActions.append(['CraftChest',['Ore']])
-                    
-            # Wood per player
-            if 'WoodPerPlayer' in self.availableActions:
-                validActions.append(['WoodPerPlayer',['WoodPerPlayer']])
-                
-            # Three mountain upgrade one
-            # Loop through upgrades
-            if 'MountainThreeUpgradeOne' in self.availableActions:
-                for i in self.availableSingleUpgrades:
-                    # Loop through mountains
-                    for j in range(len(self.mountains)):
-                        # If has upgradeable resrouces
-                        if player.resources[i] >= 1:
-                            # If has mountain to take from
-                            if len(self.mountains[j]) >= 3:
-                                validActions.append(['MountainThreeUpgradeOne',[j, 3, i]])  
-                            if len(self.mountains[j]) >= 2:
-                                validActions.append(['MountainThreeUpgradeOne',[j, 2, i]])  
-                            if len(self.mountains[j]) >= 1:
-                                validActions.append(['MountainThreeUpgradeOne',[j, 1, i]])                            
-                        # Add option to just take 1. This should trigger only once so add on one loop only
-                        if i == 'Clothing' and len(self.mountains[j]) >= 3:
-                            validActions.append(['MountainThreeUpgradeOne',[j, 3, 'None']])  
-                        if i == 'Clothing' and len(self.mountains[j]) >= 2:
-                            validActions.append(['MountainThreeUpgradeOne',[j, 2, 'None']]) 
-                        if i == 'Clothing' and len(self.mountains[j]) >= 1:
-                            validActions.append(['MountainThreeUpgradeOne',[j, 1, 'None']]) 
-                    # Always add option to just upgrade
-                    if player.resources[i] >= 1:
-                        validActions.append(['MountainThreeUpgradeOne',[0, 0, i]])   
-                        
-            # Upgrade Three
-            if 'UpgradeThree' in self.availableActions:
-                # List upgradeable resources player has, up to three times
-                upgradeableSingles = []
-                for i in self.availableSingleUpgrades:
-                    if player.resources[i] >= 3:
-                        upgradeableSingles.append(i)
-                    if player.resources[i] >= 2:
-                        upgradeableSingles.append(i)
-                    if player.resources[i] >= 1:
-                        upgradeableSingles.append(i)
-                # Create list of three combinations
-                for i in set(list(itertools.combinations(upgradeableSingles, 3))):
-                    validActions.append(['UpgradeThree',[i[0], i[1], i[2]]])
-                # Create list of two combinations
-                for i in set(list(itertools.combinations(upgradeableSingles, 2))):
-                    validActions.append(['UpgradeThree',[i[0], i[1], 'None']])
-                # Create list of one combinations
-                for i in set(list(itertools.combinations(upgradeableSingles, 1))):
-                    validActions.append(['UpgradeThree',[i[0], 'None', 'None']])
+                        validActions.append(['PlayOccupationOne',['Ore','None']])
             
+            # Two viking actions            
+            if player.vikings >= 2:
+                # Build StoneHouse
+                if player.resources['Stone'] >= 1 and 'StoneHouse' in self.availableHouses and 'BuildStoneHouse' in self.availableActions:
+                    validActions.append(['BuildStoneHouse',['BuildStoneHouse']])
+                    
+                # Build Knarr
+                if player.resources['Wood'] >= 2 and len(player.knarrs) + len(player.longships) < 4 and 'BuildKnarr' in self.availableActions:
+                    validActions.append(['BuildKnarr',['BuildKnarr']])
+                    
+                # Hunting Game two
+                if 'HuntingGameTwo' in self.availableActions:
+                    validActions.append(['HuntingGameTwo',['HuntingGameTwo']])
+                    
+                # Lay Snare
+                if 'LaySnare' in self.availableActions:
+                    validActions.append(['LaySnare',['LaySnare']])
+                    
+                # Buy Sheep
+                if player.resources['Silver'] >= 1 and 'BuySheep' in self.availableActions:
+                    validActions.append(['BuySheep',['BuySheep']])
+                    
+                # Buy Cattle              
+                if player.resources['Silver'] >= 3 and 'BuyCattle' in self.availableActions:
+                    validActions.append(['BuyCattle',['BuyCattle']])
+                    
+                # Weekly Market two
+                if 'WeeklyMarketTwo' in self.availableActions:
+                    validActions.append(['WeeklyMarketTwo',['WeeklyMarketTwo']])
+                            
+                # Products two
+                if 'ProductsTwo' in self.availableActions:
+                    validActions.append(['ProductsTwo',['ProductsTwo']])
+                    
+                # Make Clothing
+                if player.resources['Hide'] >= 1 and player.resources['Linen'] >= 1 and 'CraftClothing' in self.availableActions:
+                    validActions.append(['CraftClothing',['CraftClothing']])
+    
+                # Craft chest
+                if player.resources['Wood'] + player.resources['Ore'] >= 1 and 'CraftChest' in self.availableActions:
+                    if player.resources['Wood'] >= 1:
+                        validActions.append(['CraftChest',['Wood']])                
+                    if player.resources['Ore'] >= 1:
+                        validActions.append(['CraftChest',['Ore']])
+                        
+                # Wood per player
+                if 'WoodPerPlayer' in self.availableActions:
+                    validActions.append(['WoodPerPlayer',['WoodPerPlayer']])
+                    
+                # Three mountain upgrade one
+                # Loop through upgrades
+                if 'MountainThreeUpgradeOne' in self.availableActions:
+                    for i in self.availableSingleUpgrades:
+                        # Loop through mountains
+                        for j in range(len(self.mountains)):
+                            # If has upgradeable resrouces
+                            if player.resources[i] >= 1:
+                                # If has mountain to take from
+                                if len(self.mountains[j]) >= 3:
+                                    validActions.append(['MountainThreeUpgradeOne',[j, 3, i]])  
+                                if len(self.mountains[j]) >= 2:
+                                    validActions.append(['MountainThreeUpgradeOne',[j, 2, i]])  
+                                if len(self.mountains[j]) >= 1:
+                                    validActions.append(['MountainThreeUpgradeOne',[j, 1, i]])                            
+                            # Add option to just take 1. This should trigger only once so add on one loop only
+                            if i == 'Clothing' and len(self.mountains[j]) >= 3:
+                                validActions.append(['MountainThreeUpgradeOne',[j, 3, 'None']])  
+                            if i == 'Clothing' and len(self.mountains[j]) >= 2:
+                                validActions.append(['MountainThreeUpgradeOne',[j, 2, 'None']]) 
+                            if i == 'Clothing' and len(self.mountains[j]) >= 1:
+                                validActions.append(['MountainThreeUpgradeOne',[j, 1, 'None']]) 
+                        # Always add option to just upgrade
+                        if player.resources[i] >= 1:
+                            validActions.append(['MountainThreeUpgradeOne',[0, 0, i]])   
+                            
+                # Upgrade Three
+                if 'UpgradeThree' in self.availableActions:
+                    # List upgradeable resources player has, up to three times
+                    upgradeableSingles = []
+                    for i in self.availableSingleUpgrades:
+                        if player.resources[i] >= 3:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 2:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 1:
+                            upgradeableSingles.append(i)
+                    # Create list of three combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 3))):
+                        validActions.append(['UpgradeThree',[i[0], i[1], i[2]]])
+                    # Create list of two combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 2))):
+                        validActions.append(['UpgradeThree',[i[0], i[1], 'None']])
+                    # Create list of one combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 1))):
+                        validActions.append(['UpgradeThree',[i[0], 'None', 'None']])
+                     
+                # Upgrade all greens two
+                if 'UpgradeGreensTwo' in self.availableActions:
+                    validGreenUpgrades = []
+                    if len(player.knarrs) >= 1 and player.resources['Silver'] >= 1:
+                        for i in self.availableGreenUpgrades:
+                            # Track all possible green upgrades
+                            if player.resources[i] >= 1:
+                                validGreenUpgrades.append(i)
+                        # Populate list of every possible combination of valid green upgrades
+                        print(validGreenUpgrades)
+                        for i in range(len(validGreenUpgrades) + 1):
+                            for j in itertools.combinations(validGreenUpgrades, i):
+                                validActions.append(['UpgradeGreensOne',list(j)])  
+                                
+                # Pillaging one
+                if len(player.longships) >= 1 and 'PillagingOne' in self.availableActions:
+                    validActions.append(['PillagingOne',['PillagingOne']])
+                    
+                # Exploration two            
+                if len(player.longships) + len(player.knarrs) >= 1 and 'ExplorationTwo' in self.availableActions:
+                    if 'Iceland' in self.availableExplorationBoards:
+                        validActions.append(['ExplorationTwo',['Iceland']])
+                    if 'Greenland' in self.availableExplorationBoards:
+                        validActions.append(['ExplorationTwo',['Greenland']])
+                    if 'BearIsland' in self.availableExplorationBoards:
+                        validActions.append(['ExplorationTwo',['BearIsland']])
+                        
+                # Emigrate one
+                if player.resources['Silver'] >= self.round and player.feastTable[0][0] == 'F' and player.feastTable[1][0] == 'F' and 'EmigrateOne' in self.availableActions:
+                    if len(player.knarrs) >= 1:
+                        validActions.append(['EmigrateOne',['Knarr']])
+                    if len(player.longships) >= 1:
+                        validActions.append(['EmigrateOne',['Longship']])
+                        
+                # Play occupations two
+                if len(player.occupations) >= 1 and 'PlayOccupationsTwo' in self.availableActions:
+                    # Playing two occupations
+                    for i in list(itertools.combinations(player.occupations, 2)):
+                        validActions.append(['PlayOccupationsTwo',[i[0],i[1]]])
+                    # Playing one occupation
+                    for i in list(itertools.combinations(player.occupations, 1)):
+                        validActions.append(['PlayOccupationsTwo',[i[0], 'None']])
+            
+            # Three viking actions. All of these will also have an option to just take occupation
+            if player.vikings >= 3:
+                # Build LongHouse
+                if player.resources['Stone'] >= 2 and 'LongHouse' in self.availableHouses and 'BuildLongHouse' in self.availableActions:
+                    validActions.append(['BuildLongHouse',['BuildLongHouse']])
+                if 'BuildLongHouse' in self.availableActions:
+                    validActions.append(['BuildLongHouse',['None']])
+                    
+                # Build Longship
+                if player.resources['Wood'] >= 2 and len(player.knarrs) + len(player.longships) < 4 and 'BuildLongship' in self.availableActions:
+                    validActions.append(['BuildLongship',['BuuildLongship']])
+                if 'BuildLongship' in self.availableActions:
+                    validActions.append(['BuildLongship',['None']])
+                    
+                # Whaling one
+                if len(player.whalingBoats) >= 1 and 'WhalingOne' in self.availableActions:
+                    validActions.append(['WhalingOne',['WhalingOne']])
+                if 'WhalingOne' in self.availableActions:
+                    validActions.append(['WhalingOne',['None']])
+                
+                # Buy Sheep or Cattle
+                if player.resources['Silver'] >= 1 and 'BuySheepOrCattle' in self.availableActions:
+                    validActions.append(['BuySheepOrCattle',['Cattle']])
+                if 'BuySheepOrCattle' in self.availableActions:
+                    validActions.append(['BuySheepOrCattle',['Sheep']])
+                    
+                # Weekly market three
+                if 'WeeklyMarketThree' in self.availableActions:
+                    validActions.append(['WeeklyMarketThree',['WeeklyMarketThree']])
+                    
+                # Products three
+                if 'ProductsThree' in self.availableActions:
+                    validActions.append(['ProductsThree',['ProductsThree']])
+                    
+                # Craft special tile
+                if player.resources['Ore'] >= 1 and 'CraftSpecial' in self.availableActions:
+                    for i in self.availableSpecialTiles:
+                        validActions.append(['CraftSpecial',[i]])
+                if 'CraftSpecial' in self.availableActions:
+                    validActions.append(['CraftSpecial',['None']])
+                    
+                # Craft chests and runestones
+                if player.resources['Stone'] >= 2 and player.resources['Stone'] >= 2 and 'CraftChestRunestones' in self.availableActions:
+                    validActions.append(['CraftChestRunestones',['CraftChestRunestones']])
+                if 'CraftChestRunestones' in self.availableActions:
+                    validActions.append(['CraftChestRunestones',['None']])
+                    
+                # Mountain three and two
+                
+                # Upgrade three weapons
+                if 'UpgradeThreeWeapons' in self.availableActions:
+                    # List upgradeable resources player has, up to three times
+                    upgradeableSingles = []
+                    for i in self.availableSingleUpgrades:
+                        if player.resources[i] >= 3:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 2:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 1:
+                            upgradeableSingles.append(i)
+                    # Create list of three combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 3))):
+                        validActions.append(['UpgradeThreeWeapons',[i[0], i[1], i[2]]])
+                    # Create list of two combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 2))):
+                        validActions.append(['UpgradeThreeWeapons',[i[0], i[1], 'None']])
+                    # Create list of one combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 1))):
+                        validActions.append(['UpgradeThreeWeapons',[i[0], 'None', 'None']])
+                    # Option to upgrade none
+                    validActions.append(['UpgradeThreeWeapons',['None', 'None', 'None']])
+                    
+                # Upgrade four
+                if 'UpgradeFour' in self.availableActions:
+                    # List upgradeable resources player has, up to three times
+                    upgradeableSingles = []
+                    for i in self.availableSingleUpgrades:
+                        if player.resources[i] >= 4:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 3:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 2:
+                            upgradeableSingles.append(i)
+                        if player.resources[i] >= 1:
+                            upgradeableSingles.append(i)
+                    # Create list of four combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 4))):
+                        validActions.append(['UpgradeFour',[i[0], i[1], i[2], i[3]]])
+                    # Create list of three combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 3))):
+                        validActions.append(['UpgradeFour',[i[0], i[1], i[2], 'None']])
+                    # Create list of two combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 2))):
+                        validActions.append(['UpgradeFour',[i[0], i[1], 'None', 'None']])
+                    # Create list of one combinations
+                    for i in set(list(itertools.combinations(upgradeableSingles, 1))):
+                        validActions.append(['UpgradeFour',[i[0], 'None', 'None', 'None']])
+                    # Option to upgrade none
+                    validActions.append(['UpgradeFour',['None', 'None', 'None', 'None']])
+                    
+                # Buy special tiles
+                if len(player.knarrs) >= 1 and 'BuySpecials' in self.availableActions:
+                    for i in self.availableSpecialTiles:
+                        for j in self.availableSpecialTiles:
+                            # Buy two specials
+                            if i != j and player.resources['Silver'] >= self.availableSpecialTiles[i] + self.availableSpecialTiles[j] :
+                                validActions.append(['BuySpecials',[i,j]])
+                        # Buy one special
+                        if player.resources['Silver'] >= self.availableSpecialTiles[i]:
+                            validActions.append(['BuySpecials',[i,'None']])
+                if 'BuySpecials' in self.availableActions:
+                    validActions.append(['BuySpecials',['None','None']])
+                    
+                # Pillaging two
+                if len(player.longships) >= 1 and 'PillagingTwo' in self.availableActions:
+                    validActions.append(['PillagingTwo',['PillagingTwo']])
+                if 'PillagingTwo' in self.availableActions:
+                    validActions.append(['PillagingTwo',['None']])
+                    
+                # Exploration three         
+                if len(player.longships) >= 1 and 'ExplorationThree' in self.availableActions:
+                    if 'BaffinIsland' in self.availableExplorationBoards:
+                        validActions.append(['ExplorationThree',['BaffinIsland']])
+                    if 'Labrador' in self.availableExplorationBoards:
+                        validActions.append(['ExplorationThree',['Labrador']])
+                    if 'Newfoundland' in self.availableExplorationBoards:
+                        validActions.append(['ExplorationThree',['Newfoundland']])
+                if 'ExplorationThree' in self.availableActions:
+                    validActions.append(['ExplorationThree',['None']])
+                    
+                # Emigrate two
+                if player.resources['Silver'] >= self.round and player.feastTable[0][0] == 'F' and player.feastTable[1][0] == 'F' and 'EmigrateTwo' in self.availableActions:
+                    if len(player.knarrs) >= 1:
+                        validActions.append(['EmigrateTwo',['Knarr']])
+                    if len(player.longships) >= 1:
+                        validActions.append(['EmigrateTwo',['Longship']])  
+                if 'EmigrateTwo' in self.availableActions:
+                    validActions.append(['EmigrateTwo',['None']])    
+                    
+                # Play occupations three
+                if 'PlayOccupationsThree' in self.availableActions:
+                    # Playing four occupations
+                    for i in list(itertools.combinations(player.occupations + ['Drawn'], 4)):
+                        validActions.append(['PlayOccupationsThree',[i[0],i[1],i[2],i[3]]])
+                    # Playing three occupations
+                    for i in list(itertools.combinations(player.occupations + ['Drawn'], 3)):
+                        validActions.append(['PlayOccupationsThree',[i[0],i[1],i[2],'None']])
+                    # Playing two occupations
+                    for i in list(itertools.combinations(player.occupations + ['Drawn'], 2)):
+                        validActions.append(['PlayOccupationsThree',[i[0],i[1],'None','None']])
+                    # Playing one occupation
+                    for i in list(itertools.combinations(player.occupations + ['Drawn'], 1)):
+                        validActions.append(['PlayOccupationsThree',[i[0],'None','None','None']])
+                    validActions.append(['PlayOccupationsThree',['None','None','None','None']])
+                    
+            # Four viking actions. These will also have an option to just play an occupation if they have one
+            if player.vikings >= 4:
+                # Build house and boat
+                if player.resources['Stone'] >= 2 and player.resources['Wood'] >= 2 and 'BuildHouseBoat' in self.availableActions:
+                    for i in player.occupations + 'None':
+                        if 'StoneHouse' in self.availableHouses and len(player.longships) + len(player.knarrs) < 4:
+                            validActions.append(['BuildHouseBoat',['StoneHouseLongship',i]])
+                        if 'LongHouse' in self.availableHouses and len(player.longships) + len(player.knarrs) < 4:
+                            validActions.append(['BuildHouseBoat',['LongHouseKnarr',i]])
+                        if 'StoneHouse' in self.availableHouses:
+                            validActions.append(['BuildHouseBoat',['StoneHouse',i]])
+                        if 'LongHouse' in self.availableHouses:
+                            validActions.append(['BuildHouseBoat',['LongHouse',i]])
+                        if len(player.longships) + len(player.knarrs) < 4:
+                            validActions.append(['BuildHouseBoat',['Knarr',i]])
+                            validActions.append(['BuildHouseBoat',['Longship',i]])
+                if len(player.occupations) >= 1 and 'BuildHouseBoat' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['BuildHouseBoat',['None',i]])
+                        
+                # Whaling two
+                if len(player.whalingBoats) >= 1 and 'WhalingTwo' in self.availableActions:
+                    for i in player.occupations + ['None']:
+                        validActions.append(['WhalingTwo',['WhalingTwo',i]])
+                if len(player.occupations) >= 1 and 'WhalingTwo' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['WhalingTwo',['None',i]])
+                        
+                # Buy sheep and cattle            
+                if player.resources['Silver'] >= 3 and 'BuySheepAndCattle' in self.availableActions:
+                    for i in player.occupations + ['None']:
+                        validActions.append(['BuySheepAndCattle',['BuySheepAndCattle',i]])
+                if len(player.occupations) >= 1 and 'BuySheepAndCattle' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['BuySheepAndCattle',['None',i]])
+                        
+                # Weekly market four
+                if 'WeeklyMarketFour' in self.availableActions:
+                    for i in player.occupations + ['None']:
+                        validActions.append(['WeeklyMarketFour',['WeeklyMarketFour',i]])
+                if len(player.occupations) >= 1 and 'WeeklyMarketFour' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['WeeklyMarketFour',['None',i]])
+                        
+                # Crafting four
+                if 'CraftingFour' in self.availableActions:
+                    for i in player.occupations + ['None']:
+                        validActions.append(['CraftingFour',['CraftingFour',i]])
+                if len(player.occupations) >= 1 and 'CraftingFour' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['CraftingFour',['None',i]])
+                        
+                # Take four mountain upgrade two twice
+                if 'MountainFourUpgradeTwoTwice' in self.availableActions:
+                    # Get list of all two double upgrades
+                    upgradeableDoubles = []
+                    validDoubleUpgrades = []
+                    for i in self.availableDoubleUpgrades:
+                        if player.resources[i] >= 2:
+                            upgradeableDoubles.append(i)
+                        if player.resources[i] >= 1:
+                            upgradeableDoubles.append(i)                    
+                    # Create list of two combinations
+                    for i in set(list(itertools.combinations(upgradeableDoubles, 2))):
+                        validDoubleUpgrades.append([i[0],i[1]])
+                    # Create list of one combinations
+                    for i in set(list(itertools.combinations(upgradeableDoubles, 1))):
+                        validDoubleUpgrades.append([i[0],'None'])
+                    validDoubleUpgrades.append(['None','None'])
+                    # Loop through occupations
+                    for i in player.occupations + ['None']:
+                        # Loop through valid double upgrades
+                        for j in validDoubleUpgrades:
+                            # Loop through mountains
+                            for k in range(len(self.mountains)):
+                                if len(self.mountains[k]) >= 4:
+                                    validActions.append(['MountainFourUpgradeTwoTwice',[k, 4] + j + [i]])
+                                if len(self.mountains[k]) >= 3:
+                                    validActions.append(['MountainFourUpgradeTwoTwice',[k, 3] + j + [i]])
+                                if len(self.mountains[k]) >= 2:
+                                    validActions.append(['MountainFourUpgradeTwoTwice',[k, 2] + j + [i]])
+                                if len(self.mountains[k]) >= 1:
+                                    validActions.append(['MountainFourUpgradeTwoTwice',[k, 1] + j + [i]])                              
+                            validActions.append(['MountainFourUpgradeTwoTwice',[0, 0] + j + [i]])  
+                validActions.remove(['MountainFourUpgradeTwoTwice', [0, 0, 'None', 'None', 'None']])               
+            
+            
+                # Take two from four mountains or upgrade three twice. WORKING ON LOGIC FOR MOUNTAIN
+                if len(player.occupations) >= 1 and 'MountainOrUpgrade' in self.availableActions:
+                    # Get list of all two double upgrades
+                    upgradeableDoubles = []
+                    validDoubleUpgrades = []
+                    for i in self.availableDoubleUpgrades:
+                        if player.resources[i] >= 2:
+                            upgradeableDoubles.append(i)
+                        if player.resources[i] >= 1:
+                            upgradeableDoubles.append(i)     
+                    # Create list of two combinations
+                    for i in set(list(itertools.combinations(upgradeableDoubles, 2))):
+                        validDoubleUpgrades.append([i[0],i[1]])
+                    # Create list of one combinations
+                    for i in set(list(itertools.combinations(upgradeableDoubles, 1))):
+                        validDoubleUpgrades.append([i[0],'None'])
+                    # Add each double upgrade with each possible occupation
+                    for i in player.occupations + ['None']:
+                        for j in validDoubleUpgrades:
+                            validActions.append(['MountainOrUpgrade',['Upgrade',i] + j])
+                            
+                    # List all combinations of up to four mountains
+                    validMountains = list(itertools.combinations(range(len(self.mountains)),4)) + list(itertools.combinations(range(len(self.mountains)),3)) + list(itertools.combinations(range(len(self.mountains)),2)) + list(itertools.combinations(range(len(self.mountains)),1)) 
+                    # Loop through each occupation
+                    for i in player.occupations + ['None']:
+                        # Loop through each combination
+                        for j in validMountains:
+                            # Loop through each mountain of each combination, storing possible mountain taking in m
+                            m = []
+                            for k in j:
+                                if len(self.mountains[k]) >= 2:
+                                    m.append([k, 2])                            
+                                m.append([k, 1])
+                            if len(m) == 4:
+                                validActions.append(['MountainOrUpgrade',['Mountain',i,m[0][0],m[0][1],m[1][0],m[1][1],m[2][0],m[2][1],m[3][0],m[3][1]]])
+                            if len(m) == 3:
+                                validActions.append(['MountainOrUpgrade',['Mountain',i,m[0][0],m[0][1],m[1][0],m[1][1],m[2][0],m[2][1],0,0]])
+                            if len(m) == 2:
+                                validActions.append(['MountainOrUpgrade',['Mountain',i,m[0][0],m[0][1],m[1][0],m[1][1],0,0,0,0]])
+                            if len(m) == 1:
+                                validActions.append(['MountainOrUpgrade',['Mountain',i,m[0][0],m[0][1],0,0,0,0,0,0]])
+                if len(player.occupations) >= 1 and 'MountainOrUpgrade' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['MountainOrUpgrade',['None',i]])
+                        
+                # Plundering
+                if len(player.longships) >= 2 and len(player.occupations) >= 1 and 'Plundering' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['Plundering',['Plundering',i]]) 
+                if len(player.occupations) >= 1 and 'Plundering' in self.availableActions:
+                    for i in player.occupations:
+                        validActions.append(['Plundering',['None',i]])           
+                        
+                # Emigrate three
+                if player.resources['Silver'] >= self.round and player.feastTable[0][0] == 'F' and player.feastTable[1][0] == 'F' and 'EmigrateThree' in self.availableActions:
+                    for i in player.occupations + ['None']:
+                        if len(player.knarrs) >= 1 and len(player.whalingBoats) >= 1:
+                            validActions.append(['EmigrateThree',[i,'Knarr','WhalingBoat']])  
+                        if len(player.longships) >= 1 and len(player.whalingBoats) >= 1:
+                            validActions.append(['EmigrateThree',[i,'Longship','WhalingBoat']])  
+                        if len(player.knarrs) >= 1:
+                            validActions.append(['EmigrateThree',[i,'Knarr','None']])  
+                        if len(player.longships) >= 1:
+                            validActions.append(['EmigrateThree',[i,'Longship','None']])  
+                if len(player.occupations) >= 1 and 'EmigrateThree' in self.availableActions:
+                    for i in player.occupations + ['None']:
+                        if len(player.whalingBoats) >= 1 and len(player.knarrs) + len(player.longships) < 4:                        
+                            validActions.append(['EmigrateThree',[i,'None','WhalingBoat']])  
+                        validActions.append(['EmigrateThree',[i,'None','None']]) 
+                validActions.remove(['EmigrateThree',['None','None','None']])
+                  
         
         return validActions
         
@@ -750,7 +1114,7 @@ class Game():
                                     break
                                     
                             if validPlacement:
-                                possiblePlacements.append([tile[l][0], i.name, j, k, tile[l][4], tile[l][5], tile[l][6]])
+                                possiblePlacements.append(['BoardPlacements',[tile[l][0], i.name, j, k, tile[l][4], tile[l][5], tile[l][6]]])
                                
         return possiblePlacements
     
@@ -942,7 +1306,7 @@ class Game():
                                     continue
                                     
                             if validPlacement:
-                                possiblePlacements.append([tile[l][0], i.ID, j, k, tile[l][4], tile[l][5], tile[l][6]])
+                                possiblePlacements.append(['HousePlacements',[tile[l][0], i.ID, j, k, tile[l][4], tile[l][5], tile[l][6]]])
                                
         return possiblePlacements
         
@@ -1028,7 +1392,7 @@ class Game():
                                 continue
                             
                     if validPlacement:
-                        possiblePlacements.append([tile[j][0], player.feastTable[i][1], tile[j][2]])
+                        possiblePlacements.append(['FeastPlacements',[tile[j][0], player.feastTable[i][1], tile[j][2]]])
             
         return possiblePlacements
                 
@@ -1063,7 +1427,7 @@ class Player():
         self.houses = []
         self.bonuses = []
         self.playerBoard = PlayerBoard()
-        self.validActions = []
+        self.emigratePoints = 0
       
         self.resources = {'Silver':0, 'Stone':0, 'Wood':0, 'Ore':0, 'Peas':1, 'Mead':1, 'Flax':1, 'Stockfish':0, 'Beans':1, 'Milk':0, 
                           'Grain':0, 'SaltMeat':0, 'Cabbage':0, 'GameMeat':0, 'Fruits':0, 'WhaleMeat':0, 'Oil':0, 'Runestone':0, 'Hide':0, 'Silverware':0, 'Wool':0, 

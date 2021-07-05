@@ -70,9 +70,11 @@ game.players[0].resources['TreasureChest'] += 1
 game.players[0].resources['EnglishCrown'] += 1
 game.players[0].resources['Robe'] += 2
 game.players[0].resources['Oil'] += 1
-game.players[0].resources['Silver'] += 1
+game.players[0].resources['Silver'] += 10
 game.players[0].resources['Stone'] += 1
 game.players[0].knarrs.append(Boat('Knarr'))
+game.players[0].longships.append(Boat('Longship'))
+game.players[0].whalingBoats.append(Boat('WhalingBoat'))
 
 temp = game.determineValidActions(game.players[0])
 
