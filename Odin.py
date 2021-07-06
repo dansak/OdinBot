@@ -1,8 +1,9 @@
 import random
 import itertools
+from AI import *
 
 class Game():
-    def __init__(self, nHumanPlayers = 1, nBotPlayers = 0, occupationSet = ['A']):
+    def __init__(self, nHumanPlayers = 1, nBotPlayers = 0, ai = [], occupationSet = ['A']):
         # Available exploration boards and stored silver
         self.availableExplorationBoards = {'Shetland':0,'FaroeIslands':0,'Iceland':0,'Greenland':0} 
         
@@ -11,14 +12,14 @@ class Game():
                                       'Horesshoe':2,'GoldBrooch':3,'ForgeHammer':4,'Fibula':4,'ThrowingAxe':4,'Chalice':5,'RoundShield':6,'EnglishCrown':9999}
         
         # Available mountains
-        self.availableMountains = [['W','W','W','W','S','S','S2'],
-                                   ['W','W','S','S','O','O','S2'],
-                                   ['W','W','W','S','O','O','S2'],
-                                   ['W','W','S','O','O','S2','S2'],
-                                   ['W','W','W','S','S','O','S2'],
-                                   ['W','W','W','W','S','O','S2'],
-                                   ['W','W','W','S','S','S','S2'],
-                                   ['W','W','S','S','S','O','S2']] 
+        self.availableMountains = [['Wood','Wood','Wood','Wood','Stone','Stone','Silver'],
+                                   ['Wood','Wood','Stone','Stone','Ore','Ore','Silver'],
+                                   ['Wood','Wood','Wood','Stone','Ore','Ore','Silver'],
+                                   ['Wood','Wood','Stone','Ore','Ore','Silver','Silver'],
+                                   ['Wood','Wood','Wood','Stone','Stone','Ore','Silver'],
+                                   ['Wood','Wood','Wood','Wood','Stone','Ore','Silver'],
+                                   ['Wood','Wood','Wood','Stone','Stone','Stone','Silver'],
+                                   ['Wood','Wood','Stone','Stone','Stone','Ore','Silver']] 
         
         # Current Mountains in play
         self.mountains = [] 
@@ -29,31 +30,22 @@ class Game():
         # Available Houses
         self.availableHouses = ['Shed'] * 3 + ['StoneHouse'] * 3 + ['LongHouse'] * 5
         
-        # Available action spaces
-        self.availableActions = ['BuildShed','BuildWhalingBoat','HuntingGameOne','HuntStockfish','BuyStockfish','BuySaltMeat','WeeklyMarketOne','ProductsOne','CraftLinen','CraftRunestone',
-                                 'MountainTwo','MountainOneUpgradeOne','UpgradeTwo','UpgradeGreensOne','Raiding','ExplorationOne','DrawOccupation','PlayOccupationsOne','BuildStoneHouse',
-                                 'BuildKnarr','HuntingGameTwo','LaySnare','BuySheep','BuyCattle','WeeklyMarketTwo','ProductsTwo','CraftClothing','CraftChest','WoodPerPlayer','MountainThreeUpgradeOne',
-                                 'UpgradeThree','UpgradeGreensTwo','PillagingOne','ExplorationTwo','EmigrateOne','PlayOccupationsTwo','BuildLongHouse','BuildLongship','WhalingOne','BuySheepOrCattle',
-                                 'WeeklyMarketThree','ProductsThree','CraftSpecial','CraftChestRunestone','MountainThreeTwo','UpgradeThreeWeapons','UpgradeFour','BuySpecials','PillagingTwo',
-                                 'ExplorationThree','EmigrateTwo','PlayOccupationsThree','BuildHouseBoat','WhalingTwo','BuySheepAndCattle','WeeklyMarketFour','CraftingRoberSilverware',
-                                 'MountainFourUpgradeTwoTwice','MountainOrUpgrade','Plundering','EmigrateThree']
-        
         # Available anytime actions
         self.availableAnytimeActions = ['PlaceFeast','PlaceTile','BuyBoat','Arming']
-
-        # Current round
-        self.round = 1
         
         # Populate players in game
         self.players = []
-        for i in range(nHumanPlayers + nBotPlayers):
-            self.players.append(Player(i))
-            
-        # Determine who goes first
-        self.turn = random.randint(0, nHumanPlayers + nBotPlayers - 1)
+        for i in range(nHumanPlayers):
+            self.players.append(Player(i, 'Human'))
+        for i in range(nBotPlayers):
+            self.players.append(Player(i + nHumanPlayers, ai[i]))
+        random.shuffle(self.players)
+                   
+        # Set starting round
+        self.round = 1
         
         # Initialize starting player token which will be assigned when the first person passes
-        self.startingPlayer = None
+        self.endedLast = 0
         
         # Draw first two mountains
         self.drawMountain() 
@@ -97,58 +89,58 @@ class Game():
                                               'WharfOwner','Host','Hornblower','Mineworker','Fighter']
          
         # List all possible single upgrades
-        self.availableSingleUpgrades = {'Peas':['Mead'],
-                                        'Flax':['Stockfish'],
-                                        'Beans':['Milk'],
-                                        'Grain':['SaltMeat'],
-                                        'Cabbage':['GameMeat'],
-                                        'Fruits':['WhaleMeat'],
-                                        'Mead':['Oil'],
-                                        'Stockfish':['Hide'],
-                                        'Milk':['Wool'],
-                                        'SaltMeat':['Linen'],
-                                        'GameMeat':['SkinAndBones'],
-                                        'Sheep':['Fur'],
-                                        'PregnantSheep':['Fur'],
-                                        'WhaleMeat':['Robe'],
-                                        'Cattle':['Clothing'],
-                                        'PregnantCattle':['Clothing'],
-                                        'Oil':['Runestone'],
-                                        'Hide':['Silverware'],
-                                        'Wool':['Chest'],
-                                        'Linen':['Silk'],
-                                        'SkinAndBones':['Spices'],
-                                        'Fur':['Jewelry'],
-                                        'Robe':['TreasureChest'],
-                                        'Clothing':['SilverHoard']}
+        self.availableSingleUpgrades = {'Peas':'Mead',
+                                        'Flax':'Stockfish',
+                                        'Beans':'Milk',
+                                        'Grain':'SaltMeat',
+                                        'Cabbage':'GameMeat',
+                                        'Fruits':'WhaleMeat',
+                                        'Mead':'Oil',
+                                        'Stockfish':'Hide',
+                                        'Milk':'Wool',
+                                        'SaltMeat':'Linen',
+                                        'GameMeat':'SkinAndBones',
+                                        'Sheep':'Fur',
+                                        'PregnantSheep':'Fur',
+                                        'WhaleMeat':'Robe',
+                                        'Cattle':'Clothing',
+                                        'PregnantCattle':'Clothing',
+                                        'Oil':'Runestone',
+                                        'Hide':'Silverware',
+                                        'Wool':'Chest',
+                                        'Linen':'Silk',
+                                        'SkinAndBones':'Spices',
+                                        'Fur':'Jewelry',
+                                        'Robe':'TreasureChest',
+                                        'Clothing':'SilverHoard'}
          
         # List all possible double upgrades
-        self.availableDoubleUpgrades = {'Peas':['Oil'],
-                                  'Flax':['Hide'],
-                                  'Beans':['Wool'],
-                                  'Grain':['Linen'],
-                                  'Cabbage':['SkinAndBones'],
-                                  'Fruits':['Robe'],
-                                  'Mead':['Runestone'],
-                                  'Stockfish':['Silverware'],
-                                  'Milk':['Chest'],
-                                  'SaltMeat':['Silk'],
-                                  'GameMeat':['Spices'],
-                                  'Sheep':['Jewelry'],
-                                  'PregnantSheep':['Jewelry'],
-                                  'WhaleMeat':['TreasureChest'],
-                                  'Cattle':['SilverHoard'],
-                                  'PregnantCattle':['SilverHoard']}  
+        self.availableDoubleUpgrades = {'Peas':'Oil',
+                                  'Flax':'Hide',
+                                  'Beans':'Wool',
+                                  'Grain':'Linen',
+                                  'Cabbage':'SkinAndBones',
+                                  'Fruits':'Robe',
+                                  'Mead':'Runestone',
+                                  'Stockfish':'Silverware',
+                                  'Milk':'Chest',
+                                  'SaltMeat':'Silk',
+                                  'GameMeat':'Spices',
+                                  'Sheep':'Jewelry',
+                                  'PregnantSheep':'Jewelry',
+                                  'WhaleMeat':'TreasureChest',
+                                  'Cattle':'SilverHoard',
+                                  'PregnantCattle':'SilverHoard'}  
         
         # List all possible green upgrades
-        self.availableGreenUpgrades = {'Oil':['Runestone'],
-                                       'Hide':['Silverware'],
-                                       'Wool':['Chest'],
-                                       'Linen':['Silk'],
-                                       'SkinAndBones':['Spices'],
-                                       'Fur':['Jewelry'],
-                                       'Robe':['TreasureChest'],
-                                       'Clothing':['SilverHoard']}
+        self.availableGreenUpgrades = {'Oil':'Runestone',
+                                       'Hide':'Silverware',
+                                       'Wool':'Chest',
+                                       'Linen':'Silk',
+                                       'SkinAndBones':'Spices',
+                                       'Fur':'Jewelry',
+                                       'Robe':'TreasureChest',
+                                       'Clothing':'SilverHoard'}
         
         # Draw each player a starting occupation card and starting weapons
         for i in self.players:
@@ -164,31 +156,64 @@ class Game():
             
             i.resources[self.availableWeapons.pop(random.randint(0, len(self.availableWeapons) - 1))] += 1
 
-                
-                
+        # Play through each round
+        for i in range(7):
+                    
+            # Available action spaces
+            self.availableActions = ['BuildShed','BuildWhalingBoat','HuntingGameOne','HuntStockfish','BuyStockfish','BuySaltMeat','WeeklyMarketOne','ProductsOne','CraftLinen','CraftRunestone',
+                                     'MountainTwo','MountainOneUpgradeOne','UpgradeTwo','UpgradeGreensOne','Raiding','ExplorationOne','DrawOccupation','PlayOccupationsOne','BuildStoneHouse',
+                                     'BuildKnarr','HuntingGameTwo','LaySnare','BuySheep','BuyCattle','WeeklyMarketTwo','ProductsTwo','CraftClothing','CraftChest','WoodPerPlayer','MountainThreeUpgradeOne',
+                                     'UpgradeThree','UpgradeGreensTwo','PillagingOne','ExplorationTwo','EmigrateOne','PlayOccupationsTwo','BuildLongHouse','BuildLongship','WhalingOne','BuySheepOrCattle',
+                                     'WeeklyMarketThree','ProductsThree','CraftSpecial','CraftChestRunestone','MountainThreeTwo','UpgradeThreeWeapons','UpgradeFour','BuySpecials','PillagingTwo',
+                                     'ExplorationThree','EmigrateTwo','PlayOccupationsThree','BuildHouseBoat','WhalingTwo','BuySheepAndCattle','WeeklyMarketFour','CraftingRoberSilverware',
+                                     'MountainFourUpgradeTwoTwice','MountainOrUpgrade','Plundering','EmigrateThree']
+
+            print('\nStarting Round ' + str(self.round))
+            self.harvestPhase()
+            self.explorationPhase()
+            self.drawWeaponPhase()
+            self.actionPhase()
+            for i in self.players:
+                i.endedTurn = False
+            self.determineStartingPlayerPhase()
+            self.incomePhase()
+            self.breedingPhase()
+            self.actionPhase()
+            for i in self.players:
+                i.endedTurn = False
+            self.bonusPhase()
+            self.mountainPhase()
+            self.returnVikingsPhase()
+            print('\nResources:')
+            print(self.players[0].resources)
+            print('\nFeast Table:')
+            print(self.players[0].feastTable)
+            
 
     def harvestPhase(self):
+        print('\nHarvest Phase:')
         for i in self.players:           
             if self.round == 2:
-                i.peas += 1
-                i.flax += 1
-                i.beans += 1
-                i.grain += 1
+                i.resources['Peas'] += 1
+                i.resources['Flax'] += 1
+                i.resources['Beans'] += 1
+                i.resources['Grain'] += 1
             elif self.round == 4:
-                i.peas += 1
-                i.flax += 1
-                i.beans += 1
-                i.grain += 1
-                i.cabbage += 1
+                i.resources['Peas'] += 1
+                i.resources['Flax'] += 1
+                i.resources['Beans'] += 1
+                i.resources['Grain'] += 1
+                i.resources['Cabbage'] += 1
             elif self.round == 6:
-                i.peas += 1
-                i.flax += 1
-                i.beans += 1
-                i.grain += 1
-                i.cabbage += 1
-                i.fruits += 1
+                i.resources['Peas'] += 1
+                i.resources['Flax'] += 1
+                i.resources['Beans'] += 1
+                i.resources['Grain'] += 1
+                i.resources['Cabbage'] += 1
+                i.resources['Fruits'] += 1
                 
     def explorationPhase(self):
+        print('\nExploration Phase:')
         if self.round == 3:
             for i in self.availableExplorationBoards:
                 self.availableExplorationBoards[i] += 2
@@ -215,17 +240,31 @@ class Game():
                 self.availableExplorationBoards['Newfoundland'] = 0            
                 
     def drawWeaponPhase(self):
+        print('\nDraw Weapon Phase:')
         for i in self.players:
             self.drawWeapon(i, 1)
+                
+    def actionPhase(self):
+        print('\nAction Phase:')
+        ended = 0
+        player = 0
+        while ended < len(self.players):
+            if not self.players[player].endedTurn:
+                ended += self.takeActions(self.players[player])
             
     def determineStartingPlayerPhase(self):
-        self.turn = self.startingPlayer
+        print('\nDetermine Starting Player Phase:')
+        # Rotate players to start with person who ended turn last
+        while self.players[0].ID != self.endedLast:
+            self.players.append(self.players.pop(0))        
             
     def incomePhase(self):
+        print('\nIncome Phase:')
         for i in self.players:
             i.resources['Silver'] += i.income
         
     def breedingPhase(self):
+        print('\nBreeding Phase:')
         for i in self.players:
             if i.resources['PregnantSheep'] > 0:
                 i.resources['Sheep'] += i.resources['PregnantSheep'] + 1
@@ -238,32 +277,70 @@ class Game():
                 i.resources['PregnantCattle'] = 0
             elif i.resources['Cattle'] >= 2:
                 i.resources['PregnantCattle'] += 1
-                i.resources['Cattle'] -= 1   
+                i.resources['Cattle'] -= 1              
             
     def feastPhase(self):
+        print('\nFeast Phase:')
         for i in self.players:
-            # Check feast logic
-            print('Feast Logic')
+            # Give thing penalty per open spot in feast table
+            i.penalty += i.feastTable.count('F')
+            # Clear feast table and add 1 slot
+            i.feastTable = ['F'] * len(i.feastTable) + 1               
                 
     def bonusPhase(self):
+        print('\nBonus Phase:')
         for i in self.players:
-            for j in i.bonuses:
-                if j == 'StoneHouse':
-                    i.houses.append(House('StoneHouse'))
-                elif j == 'Cloakpin':
-                    if j in self.availableSpecialTiles:
-                        self.availableSpecialTiles.remove(j)
-                        i.resources[j] += 1
-                else:
-                    i.resources[j] += 1
+            # Look through each player's boards and houses for bonuses
+            for j in i.houses + i.expBoards + [i.playerBoard]:
+                # Check every X
+                for k in range(len(j.tiles[0])):
+                    # Check every Y
+                    for l in range(len(j.tiles)):
+                        # Look for spaces starting with bonus
+                        if j.tiles[l][k][0:5] == 'Bonus':
+                            validBonus = True
+                            # Check top
+                            if l < len(j.tiles) - 1:
+                                if j.tiles[l + 1][k] in ['F','P']:
+                                    validBonus = False
+                            # Check right
+                            if k < len(j.tiles[0]) - 1:
+                                if j.tiles[l][k + 1] in ['F','P']:
+                                    validBonus = False
+                            # Check bottom
+                            if l > 0:
+                                if j.tiles[l - 1][k] in ['F','P']:
+                                    validBonus = False
+                            # Check left
+                            if k > 0:
+                                if j.tiles[l][k - 1] in ['F','P']:
+                                    validBonus = False
+                            if validBonus:
+                                if j.tiles[l][k] == 'BonusOreStone':
+                                    i.resources['Ore'] += 1
+                                    i.resources['Stone'] += 1
+                                elif j.tiles[l][k] == 'BonusRunestoneOre':
+                                    i.resources['Runestone'] += 1
+                                    i.resources['Ore'] += 1
+                                elif j.tiles[l][k] == 'BonusStoneHouse':
+                                    i.houses.append(House('StoneHouse'))
+                                elif j.tiles[l][k] == 'BonusClothpin':
+                                    if 'Clothinpin' in self.availableSpecialTiles:
+                                        i.resources['Clothpin'] += 1
+                                        self.availableSpecialTiles.remove('Clothpin')
+                                else:
+                                    i.resources[j.tiles[l][k]] += 1
+
     
     def mountainPhase(self):
+        print('\nMountain Phase:')
         for i in self.mountains:
             if len(i) > 0:
                 i.pop(0)
         self.drawMountain   
 
     def returnVikingsPhase(self):
+        print('\nReturn Vikings Phase:')
         for i in self.players:
             i.vikings = self.round + 6    
         self.round += 1                          
@@ -286,13 +363,13 @@ class Game():
                                                        
             weapon = self.availableWeapons.pop(random.randint(0, len(self.availableWeapons) - 1))
             if weapon == 'Sword':
-                player.Sword += 1
+                player.resources['Sword'] += 1
             elif weapon == 'Bow':
-                player.Bow += 1
+                player.resources['Bow'] += 1
             elif weapon == 'Spear':
-                player.Spear += 1
+                player.resources['Spear'] += 1
             elif weapon == 'Snare':
-                player.Snare += 1          
+                player.resources['Snare'] += 1          
                         
     def drawMountain(self):
         self.mountains.append(self.availableMountains.pop(random.randint(0, len(self.availableMountains) - 1)))
@@ -312,19 +389,372 @@ class Game():
             self.startingPlayer = player.ID
         player.endedTurn = True
         
+    def huntingGame(self):
+        print('Hunt')
+        
+    def laySnare(self):
+        print('Snare')
+        
+    def raiding(self):
+        print('Raid')
+        
+    def pillaging(self):
+        print('Raid')
+        
+    def whaling(self):
+        print('Whaling')
+        
+    def playOccupation(self, player, occupation):
+        print('Playing ' + occupation)
+        player.occupations.remove(occupation)
+        player.playedOccupations.append(occupation)
+        # Logic for instant cards
+     
     # Take an action or anytime action
-    def takeAction(self, player, action):
-        if player.endedTurn:
-            print('Player already ended their turn!')
-        elif player.madeAction:
-            print('Player already made an action this turn!')
-        elif action not in self.availableActions + self.availableAnytimeActions:
-            print('Action has already been taken this round!')
-        elif self.turn == player.ID:
-            print('Take Action')
-        else:
-            print('It is player ' + str(self.turn) + '\'s turn, not player ' + str(self.playerID) + '\'s!')
-            
+    def takeActions(self, player):
+        passed = False
+        while not passed:
+            action = player.ai.takeAction(player, self.determineValidActions(player))
+            print('You have ' + str(player.vikings) + ' vikings')
+            print(str(len(self.determineValidActions(player))) + ' possible actions')
+            print(action)
+            if action[0] in self.availableActions:
+                if action[0] == 'BuildShed':
+                    player.vikings -= 1
+                    player.resources['Wood'] -= 2
+                    player.houses.append(House('Shed'))
+                    self.availableHouses.remove('Shed')
+                elif action[0] == 'BuildWhalingBoat':
+                    player.vikings -= 1
+                    player.resources['Wood'] -= 1
+                    player.whalingBoats.append(Boat('WhalingBoat'))
+                elif action[0] == 'HuntingGameOne':
+                    player.vikings -= 1
+                    self.huntingGame()
+                elif action[0] == 'HuntStockfish':
+                    player.vikings -= 1
+                    player.resources['Stockfish'] += 1
+                elif action[0] == 'BuyStockfish':
+                    player.vikings -= 1
+                    player.resources['Silver'] -= 1
+                    player.resources['Stockfish'] += 2
+                elif action[0] == 'BuySaltMeat':
+                    player.vikings -= 1
+                    player.resources['Silver'] -= 2
+                    player.resources['SaltMeat'] += 2
+                elif action[0] == 'WeeklyMarketOne':
+                    player.vikings -= 1
+                    player.resources['Beans'] += 1
+                    player.resources['Silver'] += 1
+                elif action[0] == 'ProductsOne':
+                    player.vikings -= 1
+                    player.resources['Milk'] += max(player.resources['Cattle'] + player.resources['PregnantCattle'], 3)
+                elif action[0] == 'CraftLinen':
+                    player.vikings -= 1
+                    player.resources['Flax'] -= 1
+                    player.resources['Linen'] += 1
+                elif action[0] == 'CraftRunestone':
+                    player.vikings -= 1
+                    player.resources['Stone'] -= 1
+                    player.resources['Silver'] += 1
+                    player.resources['Runestone'] += 1
+                elif action[0] == 'MountainTwo':
+                    player.vikings -= 1
+                    for i in range(action[1][1]):
+                        if self.mountains[action[1][0]][0] == 'Silver':
+                            player.resources['Silver'] += 1
+                        player.resources[self.mountains[action[1][0]].pop(0)] += 1
+                elif action[0] == 'MountainOneUpgradeOne':
+                    player.vikings -= 1
+                    for i in range(action[1][1]):
+                        if self.mountains[action[1][0]][0] == 'Silver':
+                            player.resources['Silver'] += 1
+                        player.resources[self.mountains[action[1][0]].pop(0)] += 1
+                    if action[1][2] != 'None':
+                        player.resources[action[1][2]] -= 1
+                        player.resources[self.availableSingleUpgrades[action[1][2]]] += 1                        
+                elif action[0] == 'UpgradeTwo':
+                    player.vikings -= 1
+                    for i in action[1]:
+                        player.resources[i] -= 1
+                        player.resources[self.availableSingleUpgrades[i]] += 1
+                elif action[0] == 'UpgradeGreensOne':
+                    player.vikings -= 1
+                    player.resources['Silver'] -= 1
+                    for i in action[1]:
+                        player.resources[i] -= 1
+                        player.resources[self.availableGreenUpgrades[i]] -= 1
+                elif action[0] == 'Raiding':
+                    player.vikings -= 1
+                    self.raiding()
+                elif action[0] == 'ExplorationOne':
+                    player.vikings -= 1
+                    player.resources['Silver'] += self.availableExplorationBoards(action[1][0])
+                    self.availableExplorationBoards.remove(action[1][0])
+                    player.expBoards.append(ExpBoard(action[1][0]))
+                elif action[0] == 'DrawOccupation':
+                    player.vikings -= 1
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    player.resources['Silver'] += 1
+                elif action[0] == 'PlayOccupationsOne':
+                    player.vikings -= 1
+                    player.resources -= action[1][0]
+                    self.playOccupation(player, action[1][1])
+                elif action[0] == 'BuildStoneHouse':
+                    player.vikings -= 2
+                    player.resources['Stone'] -= 1
+                    player.houses.append(House('StoneHouse'))
+                    self.availableHouses.remove('StoneHouse')
+                elif action[0] == 'BuildKnarr':
+                    player.vikings -= 2
+                    player.resources['Wood'] -= 2
+                    player.knarrs.append(Boat('Knarr'))
+                elif action[0] == 'HuntingGameTwo':
+                    player.vikings -= 2
+                    self.huntingGame()
+                elif action[0] == 'LaySnare':
+                    player.vikings -= 2
+                    self.laySnare()
+                elif action[0] == 'BuySheep':
+                    player.vikings -= 2
+                    player.resources['Silver'] -= 1
+                    player.resources['Sheep'] += 1
+                elif action[0] == 'BuyCattle':
+                    player.vikings -= 2
+                    player.resources['Silver'] -= 3
+                    player.resources['Cattle'] += 1
+                elif action[0] == 'WeeklyMarketTwo':
+                    player.vikings -= 2
+                    player.resources['Flax'] += 1
+                    player.resources['Stockfish'] += 1
+                    player.resources['Silver'] += 1
+                elif action[0] == 'ProductsTwo':
+                    player.vikings -= 2                    
+                    player.resources['Mead'] += 2
+                    player.resources['Silver'] += 2
+                elif action[0] == 'CraftClothing':
+                    player.vikings -= 2
+                    player.resources['Hide'] -= 1
+                    player.resources['Linen'] -= 1
+                    player.resources['Clothing'] += 1
+                    player.resources['Silver'] += 2
+                elif action[0] == 'CraftChest':
+                    player.vikings -= 2
+                    player.resources[action[1][0]] -= 1
+                    player.resources['Chest'] += 1
+                    player.resources['Silver'] += 1
+                elif action[0] == 'WoodPerPlayer':
+                    player.vikings -= 2
+                    player.resources['Wood'] += len(self.players)
+                    player.resources['Ore'] += 1
+                elif action[0] == 'MountainThreeUpgradeOne':
+                    player.vikings -= 2
+                    for i in range(action[1][1]):
+                        if self.mountains[action[1][0]][0] == 'Silver':
+                            player.resources['Silver'] += 1
+                        player.resources[self.mountains[action[1][0]].pop(0)] += 1
+                    if action[1][2] != 'None':
+                        player.resources[action[1][2]] -= 1
+                        player.resources[self.availableSingleUpgrades[action[1][2]]] += 1         
+                elif action[0] == 'UpgradeThree':
+                    player.vikings -= 2
+                    for i in action[1]:
+                        player.resources[i] -= 1
+                        player.resources[self.availableSingleUpgrades[i]] += 1
+                elif action[0] == 'UpgradeGreensTwo':
+                    player.vikings -= 2
+                    player.resources['Silver'] -= 1
+                    for i in action[1]:
+                        player.resources[i] -= 1
+                        player.resources[self.availableGreenUpgrades[i]] -= 1
+                elif action[0] == 'PillagingOne':
+                    player.vikings -= 2
+                    self.pillaging()
+                elif action[0] == 'ExplorationTwo':
+                    player.vikings -= 2
+                    player.resources['Silver'] += self.availableExplorationBoards(action[1][0])
+                    self.availableExplorationBoards.remove(action[1][0])
+                    player.expBoards.append(ExpBoard(action[1][0]))
+                elif action[0] == 'EmigrateOne':
+                    player.vikings -= 2
+                    player.resources['Silver'] -= self.round
+                    if action[1][0] == 'Knarr':
+                        player.emigratePoints += 21
+                        player.knarrs.remove(0)
+                    elif action[1][0] == 'Longship':
+                        player.emigratePoints += 18
+                        # Longships should be sorted by ore and will always remove last ship (lowest ore ship)
+                        player.longships.remove(len(player.longships) - 1)
+                    player.feastTable.remove(0)
+                    player.feastTable.remove(0)
+                elif action[0] == 'PlayOccupationsTwo':
+                    player.vikings -= 2
+                    for i in action[1]:
+                        self.playOccupation(player, i)
+                elif action[0] == 'BuildLongHouse':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] == 'BuildLongHouse':
+                        player.resources['Stone'] -= 2
+                        player.houses.append(House('LongHouse'))
+                        self.availableHouses.remove('LongHouse')
+                elif action[0] == 'BuildLongship':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] == 'BuildLongship':
+                        player.longships.append(Boat('Longship'))
+                        player.resources['Wood'] -= 2                        
+                elif action[0] == 'WhalingOne':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] == 'WhalingOne':
+                        self.whaling()
+                elif action[0] == 'BuySheepOrCattle':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] == 'Cattle':
+                        player.resources['Silver'] -= 1
+                    player.resources[action[1][0]] += 1
+                elif action[0] == 'WeeklyMarketThree':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    player.resources['Fruit'] += 1
+                    player.resources['SaltMeat'] += 1
+                    player.resources['Oil'] += 1
+                    player.resources['Silver'] += 1
+                elif action[0] == 'ProductsThree':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    player.resources['Wool'] += max(player.resources['Sheep'] + player.resources['PregnantSheep'], 3)
+                elif action[0] == 'CraftSpecial':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] != 'None':
+                        player.resources[action[1][0]] += 1
+                        player.resources['Silver'] -= self.availableSpecialTiles[action[1][0]]
+                        self.availableSpecialTiles.remove(action[1][0])
+                elif action[0] == 'CraftChestRunestone':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] == 'CraftChestRunestone':
+                        player.resources['Stone'] -= 2
+                        player.resources['Wood'] -= 2
+                        player.resources['Chest'] += 2
+                        player.resources['Runestone'] += 2
+                elif action[0] == 'MountainThreeTwo':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))                    
+                elif action[0] == 'UpgradeThreeWeapons':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    self.drawWeapon(player, 4)
+                    for i in action[1]:
+                        player.resources[i] -= 1
+                        player.resources[self.availableSingleUpgrades[i]] += 1                        
+                elif action[0] == 'UpgradeFour':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    for i in action[1]:
+                        player.resources[i] -= 1
+                        player.resources[self.availableSingleUpgrades[i]] += 1
+                elif action[0] == 'BuySpecials':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    for i in action[1]:
+                        player.resources[i] += 1
+                        player.resources['Silver'] -= self.availableSpecialTiles[i]
+                        self.availableSpecialTiles.remove(i)
+                elif action[0] == 'PillagingTwo':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    self.pillaging()
+                elif action[0] == 'ExplorationThree':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    player.resources['Silver'] += self.availableExplorationBoards(action[1][0])
+                    self.availableExplorationBoards.remove(action[1][0])
+                    player.expBoards.append(ExpBoard(action[1][0]))
+                elif action[0] == 'EmigrateTwo':
+                    player.vikings -= 3
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    if action[1][0] != 'None':
+                        player.resources['Silver'] -= self.round
+                        if action[1][0] == 'Knarr':
+                            player.emigratePoints += 21
+                            player.knarrs.remove(0)
+                        elif action[1][0] == 'Longship':
+                            player.emigratePoints += 18
+                            # Longships should be sorted by ore and will always remove last ship (lowest ore ship)
+                            player.longships.remove(len(player.longships) - 1)
+                        player.feastTable.remove(0)
+                        player.feastTable.remove(0)
+                elif action[0] == 'PlayOccupationsThree':
+                    player.vikings -= 3
+                    if 'Drawn' in action[1]:
+                        action[1].remove('Drawn')
+                        action[1].append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    else:
+                        player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))                        
+                    for i in action[1]:
+                        self.playOccupation(player, i)                        
+                elif action[0] == 'BuildHouseBoat':
+                    player.vikings -= 4
+                    if action[1][1] != 'None':
+                        self.playOccupation(player, action[1][1])
+                    if action[1][0] != 'None':
+                        player.resources['Stone'] -= 2
+                        player.resources['Wood'] -= 2
+                    if action[1][0] == 'StoneHouseLongship':
+                        player.houses.append(House('StoneHouse'))
+                        self.availableHouses.remove('StoneHouse')
+                        player.longships.append(Boat('Longship'))
+                    elif action[1][0] == 'LongHouseKnarr':
+                        player.houses.append(House('LongHouse'))
+                        self.availableHouses.remove('LongHouse')
+                        player.longships.append(Boat('Knarr'))
+                    elif action[1][0] == 'StoneHouse':
+                        player.houses.append(House('StoneHouse'))
+                        self.availableHouses.remove('StoneHouse')
+                    elif action[1][0] == 'LongHouse':
+                        player.houses.append(House('LongHouse'))
+                        self.availableHouses.remove('LongHouse')
+                    elif action[1][0] == 'Knarr':
+                        player.longships.append(Boat('Knarr'))
+                    elif action[1][0] == 'Longship':
+                        player.longships.append(Boat('Longship'))
+                elif action[0] == 'WhalingTwo':
+                    player.vikings -= 4
+                    if action[1][1] != 'None':
+                        self.playOccupation(player, action[1][1])
+                    self.whaling()
+                elif action[0] == 'BuySheepAndCattle':
+                    player.vikings -= 4
+                elif action[0] == 'WeeklyMarketFour':
+                    player.vikings -= 4
+                elif action[0] == 'CraftingRoberSilverware':
+                    player.vikings -= 4
+                elif action[0] == 'MountainFourUpgradeTwoTwice':
+                    player.vikings -= 4
+                elif action[0] == 'MountainOrUpgrade':
+                    player.vikings -= 4
+                elif action[0] == 'Plundering':
+                    player.vikings -= 4
+                elif action[0] == 'EmigrateThree':              
+                    player.vikings -= 4  
+                player.madeAction = True
+            elif action[0] == 'FeastPlacements':
+                for i in range(action[1][1]):
+                    player.feastTable[action[1][4] + i] = action[1][0:4] 
+            elif action[0] == 'PassTurn':
+                passed = True
+            elif action[0] == 'EndTurn':
+                passed = True
+                player.endedTurn = True  
+        return player.endedTurn
+
+
+               
+                
     def placeHouseTile(self, player, ID, color, coords):
         for i in coords:
             player.houses[ID].tiles[i[1]][i[0]] = 'O' + color
@@ -438,7 +868,7 @@ class Game():
                         validActions.append(['UpgradeTwo',[i[0], i[1]]])
                     # Create list of one combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 1))):
-                        validActions.append(['UpgradeTwo',[i[0], 'None']])
+                        validActions.append(['UpgradeTwo',[i[0]]])
                 
                 # Upgrade all greens one
                 if 'UpgradeGreensOne' in self.availableActions:
@@ -465,9 +895,9 @@ class Game():
                     if 'FaroeIslands' in self.availableExplorationBoards:
                         validActions.append('ExplorationOne',['FaroeIslands'])
                         
-                # Take Occupation
-                if 'TakeOccupation' in self.availableActions:
-                    validActions.append(['TakeOccupation',['TakeOccupation']])
+                # Draw Occupation
+                if 'DrawOccupation' in self.availableActions:
+                    validActions.append(['DrawOccupation',['DrawOccupation']])
                 
                 # Play Occupation
                 if player.resources['Stone'] + player.resources['Ore'] >= 1 and 'PlayOccupationOne' in self.availableActions:
@@ -574,10 +1004,10 @@ class Game():
                         validActions.append(['UpgradeThree',[i[0], i[1], i[2]]])
                     # Create list of two combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 2))):
-                        validActions.append(['UpgradeThree',[i[0], i[1], 'None']])
+                        validActions.append(['UpgradeThree',[i[0], i[1]]])
                     # Create list of one combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 1))):
-                        validActions.append(['UpgradeThree',[i[0], 'None', 'None']])
+                        validActions.append(['UpgradeThree',[i[0]]])
                      
                 # Upgrade all greens two
                 if 'UpgradeGreensTwo' in self.availableActions:
@@ -620,7 +1050,7 @@ class Game():
                         validActions.append(['PlayOccupationsTwo',[i[0],i[1]]])
                     # Playing one occupation
                     for i in list(itertools.combinations(player.occupations, 1)):
-                        validActions.append(['PlayOccupationsTwo',[i[0], 'None']])
+                        validActions.append(['PlayOccupationsTwo',[i[0]]])
             
             # Three viking actions. All of these will also have an option to just take occupation
             if player.vikings >= 3:
@@ -664,10 +1094,10 @@ class Game():
                     validActions.append(['CraftSpecial',['None']])
                     
                 # Craft chests and runestones
-                if player.resources['Stone'] >= 2 and player.resources['Stone'] >= 2 and 'CraftChestRunestones' in self.availableActions:
-                    validActions.append(['CraftChestRunestones',['CraftChestRunestones']])
-                if 'CraftChestRunestones' in self.availableActions:
-                    validActions.append(['CraftChestRunestones',['None']])
+                if player.resources['Stone'] >= 2 and player.resources['Stone'] >= 2 and 'CraftChestRunestone' in self.availableActions:
+                    validActions.append(['CraftChestRunestones',['CraftChestRunestone']])
+                if 'CraftChestRunestone' in self.availableActions:
+                    validActions.append(['CraftChestRunestone',['None']])
                     
                 # Mountain three and two
                 
@@ -687,12 +1117,12 @@ class Game():
                         validActions.append(['UpgradeThreeWeapons',[i[0], i[1], i[2]]])
                     # Create list of two combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 2))):
-                        validActions.append(['UpgradeThreeWeapons',[i[0], i[1], 'None']])
+                        validActions.append(['UpgradeThreeWeapons',[i[0], i[1]]])
                     # Create list of one combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 1))):
-                        validActions.append(['UpgradeThreeWeapons',[i[0], 'None', 'None']])
+                        validActions.append(['UpgradeThreeWeapons',[i[0]]])
                     # Option to upgrade none
-                    validActions.append(['UpgradeThreeWeapons',['None', 'None', 'None']])
+                    validActions.append(['UpgradeThreeWeapons',[]])
                     
                 # Upgrade four
                 if 'UpgradeFour' in self.availableActions:
@@ -712,15 +1142,15 @@ class Game():
                         validActions.append(['UpgradeFour',[i[0], i[1], i[2], i[3]]])
                     # Create list of three combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 3))):
-                        validActions.append(['UpgradeFour',[i[0], i[1], i[2], 'None']])
+                        validActions.append(['UpgradeFour',[i[0], i[1], i[2]]])
                     # Create list of two combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 2))):
-                        validActions.append(['UpgradeFour',[i[0], i[1], 'None', 'None']])
+                        validActions.append(['UpgradeFour',[i[0], i[1]]])
                     # Create list of one combinations
                     for i in set(list(itertools.combinations(upgradeableSingles, 1))):
-                        validActions.append(['UpgradeFour',[i[0], 'None', 'None', 'None']])
+                        validActions.append(['UpgradeFour',[i[0]]])
                     # Option to upgrade none
-                    validActions.append(['UpgradeFour',['None', 'None', 'None', 'None']])
+                    validActions.append(['UpgradeFour',[]])
                     
                 # Buy special tiles
                 if len(player.knarrs) >= 1 and 'BuySpecials' in self.availableActions:
@@ -731,9 +1161,9 @@ class Game():
                                 validActions.append(['BuySpecials',[i,j]])
                         # Buy one special
                         if player.resources['Silver'] >= self.availableSpecialTiles[i]:
-                            validActions.append(['BuySpecials',[i,'None']])
+                            validActions.append(['BuySpecials',[i]])
                 if 'BuySpecials' in self.availableActions:
-                    validActions.append(['BuySpecials',['None','None']])
+                    validActions.append(['BuySpecials',[]])
                     
                 # Pillaging two
                 if len(player.longships) >= 1 and 'PillagingTwo' in self.availableActions:
@@ -768,14 +1198,14 @@ class Game():
                         validActions.append(['PlayOccupationsThree',[i[0],i[1],i[2],i[3]]])
                     # Playing three occupations
                     for i in list(itertools.combinations(player.occupations + ['Drawn'], 3)):
-                        validActions.append(['PlayOccupationsThree',[i[0],i[1],i[2],'None']])
+                        validActions.append(['PlayOccupationsThree',[i[0],i[1],i[2]]])
                     # Playing two occupations
                     for i in list(itertools.combinations(player.occupations + ['Drawn'], 2)):
-                        validActions.append(['PlayOccupationsThree',[i[0],i[1],'None','None']])
+                        validActions.append(['PlayOccupationsThree',[i[0],i[1]]])
                     # Playing one occupation
                     for i in list(itertools.combinations(player.occupations + ['Drawn'], 1)):
-                        validActions.append(['PlayOccupationsThree',[i[0],'None','None','None']])
-                    validActions.append(['PlayOccupationsThree',['None','None','None','None']])
+                        validActions.append(['PlayOccupationsThree',[i[0]]])
+                    validActions.append(['PlayOccupationsThree',[]])
                     
             # Four viking actions. These will also have an option to just play an occupation if they have one
             if player.vikings >= 4:
@@ -1362,8 +1792,8 @@ class Game():
                 for j in range(len(tile)):
                     validPlacement = True
                     # Check if there is space. If end of table reached or another tile reached, returns False
-                    for k in range(tile[j][1] - 1):
-                        if player.feastTable[i][1] + k + 1 > len(player.feastTable):
+                    for k in range(tile[j][1]):
+                        if player.feastTable[i][1] + k + 2 > len(player.feastTable):
                             validPlacement = False
                             continue
                         elif player.feastTable[i + k + 1][0] != 'F':
@@ -1373,7 +1803,7 @@ class Game():
                     
                     # Next check if either end is same color. First make sure not at either end of table. Don't do to silver (color = B)
                     if tile[j][3] != 'B':
-                        if player.feastTable[i][1] != 1:
+                        if player.feastTable[i][1] != 0:
                             if player.feastTable[i - 1][3] == tile[j][3]:
                                 validPlacement = False
                                 continue
@@ -1392,28 +1822,13 @@ class Game():
                                 continue
                             
                     if validPlacement:
-                        possiblePlacements.append(['FeastPlacements',[tile[j][0], player.feastTable[i][1], tile[j][2]]])
+                        possiblePlacements.append(['FeastPlacements',[tile[j][0], tile[j][1], tile[j][2], tile[j][3], player.feastTable[i][1]]])
             
         return possiblePlacements
-                
-
-    def buildShed(self, player):
-        if player.endedTurn:
-            print('Player already ended their turn!')
-        elif player.madeAction:
-            print('Player already made an action this turn!')
-        elif self.turn == player.ID:
-            if 'Shed' in self.availableHouses:
-                self.availableHouses.remove('Shed')
-                player.houses.append(House('Shed'))
-            else:
-                print('No Shed\'s Available!')
-        else:
-            print('It is player ' + str(self.turn) + '\'s turn, not player ' + str(self.playerID) + '\'s!')
-            
+    
                       
 class Player():
-    def __init__(self, ID):
+    def __init__(self, ID, ai):
         self.ID = ID
         self.vikings = 6
         self.endedTurn = False
@@ -1423,11 +1838,13 @@ class Player():
         self.longships = []
         self.penalty = 0
         self.occupations = []
+        self.playedOccupations = []
         self.expBoards = []
         self.houses = []
-        self.bonuses = []
         self.playerBoard = PlayerBoard()
         self.emigratePoints = 0
+        self.ai = AI(ai)
+        self.income = 0
       
         self.resources = {'Silver':0, 'Stone':0, 'Wood':0, 'Ore':0, 'Peas':1, 'Mead':1, 'Flax':1, 'Stockfish':0, 'Beans':1, 'Milk':0, 
                           'Grain':0, 'SaltMeat':0, 'Cabbage':0, 'GameMeat':0, 'Fruits':0, 'WhaleMeat':0, 'Oil':0, 'Runestone':0, 'Hide':0, 'Silverware':0, 'Wool':0, 
@@ -1437,12 +1854,12 @@ class Player():
                           'Chalice':0, 'RoundShield':0, 'EnglishCrown':0}
 
         # FeastTable slot have Free (F) or occupied (name of tile); slot number; rotation horizontal (H), vertical (V), or both (B); and color Red (R), Orange (O), or Blue (B)
-        self.feastTable = [['F',1,'B','B'],
+        self.feastTable = [['F',0,'B','B'],
+                           ['F',1,'B','B'],
                            ['F',2,'B','B'],
                            ['F',3,'B','B'],
                            ['F',4,'B','B'],
-                           ['F',5,'B','B'],
-                           ['F',6,'B','B']]
+                           ['F',5,'B','B']]
         
 class PlayerBoard():
     def __init__(self):
@@ -1521,7 +1938,7 @@ class ExpBoard():
             self.points = 12
             self.tiles = [['X','X','X','X','P','P','X','X'],
                           ['X','X','X','F','P','F','F','X'],
-                          ['X','F','F','F','F','F','BRuneStoneStone','X'],
+                          ['X','F','F','F','F','F','BonusRunestoneStone','X'],
                           ['X','F','F','F','F','F','P','P','X'],
                           ['X','Income2','X','F','F','P','F','BonusStockfish'],
                           ['F','F','Income1','F','BonusGameMeat','F','P','F'],

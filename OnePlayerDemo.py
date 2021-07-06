@@ -1,8 +1,11 @@
 from Odin import *
+from AI import *
 
 
-game = Game(nHumanPlayers = 1, occupationSet = ['A'])
+game = Game(nHumanPlayers = 0, nBotPlayers = 1, ai = ['Random'], occupationSet = ['A'])
 
+
+#%%
 print('\nMountains:')
 print(game.mountains)
 print('\nAvailable Mountains:')
