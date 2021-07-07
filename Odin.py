@@ -9,12 +9,12 @@ class Game():
         
         # Available Special Tiles and their silver cost
         self.availableSpecialTiles = {'GlassBeads':0,'Helmet':1,'Cloakpin':1,'Belt':2,'Crucifix':2,'DrinkingHorn':2,'AmberFigure':2,
-                                      'Horesshoe':2,'GoldBrooch':3,'ForgeHammer':4,'Fibula':4,'ThrowingAxe':4,'Chalice':5,'RoundShield':6,'EnglishCrown':9999}
+                                      'Horseshoe':2,'GoldBrooch':3,'ForgeHammer':4,'Fibula':4,'ThrowingAxe':4,'Chalice':5,'RoundShield':6,'EnglishCrown':9999}
         
         # Sword tiles and their sword costs
         self.swordTiles = {'Runestone':6,'Silverware':7,'Chest':8,'Silk':8,'Spices':9,'Jewelry':10,'TreasureChest':11,'SilverHoard':15,
                            'GlassBeads':7,'Helmet':8,'Cloakpin':8,'Belt':8,'Crucifix':8,'DrinkingHorn':8,'AmberFigure':9,
-                           'Horesshoe':9,'GoldBrooch':9,'ForgeHammer':10,'Fibula':10,'ThrowingAxe':11,'Chalice':12,'RoundShield':13,'EnglishCrown':16}
+                           'Horseshoe':9,'GoldBrooch':9,'ForgeHammer':10,'Fibula':10,'ThrowingAxe':11,'Chalice':12,'RoundShield':13,'EnglishCrown':16}
         
         # Available mountains
         self.availableMountains = [['Wood','Wood','Wood','Wood','Stone','Stone','Silver'],
@@ -158,7 +158,8 @@ class Game():
             self.availableWeapons.remove('Bow')
             self.availableWeapons.remove('Spear')
             self.availableWeapons.remove('Snare')
-
+        
+    def play(self):        
         # Play through each round
         for i in range(7):
                     
@@ -187,6 +188,7 @@ class Game():
             self.actionPhase()
             for i in self.players:
                 i.endedTurn = False
+            self.feastPhase()
             self.bonusPhase()
             self.mountainPhase()
             self.returnVikingsPhase()
@@ -196,6 +198,8 @@ class Game():
             print(self.players[0].feastTable)
             print('\nMain Board:')
             print(self.players[0].boards[0].tiles)
+            
+        return self.score()
             
 
     def harvestPhase(self):
@@ -292,9 +296,9 @@ class Game():
         print('\n***Feast Phase***')
         for i in self.players:
             # Give thing penalty per open spot in feast table
-            i.penalty += i.feastTable.count('F')
+            i.penalty += i.feastTable.count(['F','B','B'])
             # Clear feast table and add 1 slot
-            i.feastTable = ['F'] * len(i.feastTable) + 1               
+            i.feastTable = [['F','B','B']] * (len(i.feastTable) + 1 )              
                 
     def bonusPhase(self):
         print('\n***Bonus Phase***')
@@ -352,7 +356,18 @@ class Game():
         print('\n***Return Vikings Phase***')
         for i in self.players:
             i.vikings = self.round + 6    
-        self.round += 1                          
+        self.round += 1     
+
+    def score(self):
+        score = [0] * len(self.players)
+        for i in range(len(self.players)):
+            score[i] += len(self.players[i].whalingBoats) * 3
+            score[i] += len(self.players[i].knarrs) * 5
+            score[i] += len(self.players[i].longships) * 8
+            score[i] += self.players[i].emigratePoints
+            
+        return score
+            
             
     def drawWeapon(self, player, nWeapons):
         for i in range(nWeapons):
@@ -614,15 +629,15 @@ class Game():
                         player.resources[self.availableGreenUpgrades[i]] -= 1
                 elif action[0] == 'Raiding':
                     player.vikings -= 1
-                    self.raiding()
+                    self.raiding(player)
                 elif action[0] == 'ExplorationOne':
                     player.vikings -= 1
                     player.resources['Silver'] += self.availableExplorationBoards[action[1][0]]
                     del self.availableExplorationBoards[action[1][0]]
-                    player.expBoards.append(ExpBoard(action[1][0]))
+                    player.boards.append(ExpBoard(action[1][0]))
                 elif action[0] == 'DrawOccupation':
                     player.vikings -= 1
-                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations))))
+                    player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations) - 1)))
                     player.resources['Silver'] += 1
                 elif action[0] == 'PlayOccupationsOne':
                     player.vikings -= 1
@@ -702,7 +717,7 @@ class Game():
                     player.vikings -= 2
                     player.resources['Silver'] += self.availableExplorationBoards[action[1][0]]
                     del self.availableExplorationBoards[action[1][0]]
-                    player.expBoards.append(ExpBoard(action[1][0]))
+                    player.boards.append(ExpBoard(action[1][0]))
                 elif action[0] == 'EmigrateOne':
                     player.vikings -= 2
                     player.resources['Silver'] -= self.round
@@ -803,7 +818,7 @@ class Game():
                     if action[1][0] != 'None':
                         player.resources['Silver'] += self.availableExplorationBoards[action[1][0]]
                         del self.availableExplorationBoards[action[1][0]]
-                        player.expBoards.append(ExpBoard(action[1][0]))
+                        player.boards.append(ExpBoard(action[1][0]))
                 elif action[0] == 'EmigrateTwo':
                     player.vikings -= 3
                     player.occupations.append(self.availableOccupations.pop(random.randint(0, len(self.availableOccupations) - 1)))
@@ -931,7 +946,7 @@ class Game():
                 player.madeAction = True
             elif action[0] == 'FeastPlacements':
                 for i in range(action[1][1]):
-                    player.feastTable[action[1][4] + i] = action[1][0:4] 
+                    player.feastTable[action[1][4] + i] = [action[1][0],action[1][2],action[1][3]] 
                 player.resources[action[1][0]] -= 1
             elif action[0] == 'BoardPlacements':
                 for i in range(action[1][1]):
@@ -1980,7 +1995,7 @@ class Game():
                     validPlacement = True
                     # Check if there is space. If end of table reached or another tile reached, returns False
                     for k in range(tile[j][1]):
-                        if player.feastTable[i][1] + k + 2 > len(player.feastTable):
+                        if i + k + 2 > len(player.feastTable):
                             validPlacement = False
                             continue
                         elif player.feastTable[i + k + 1][0] != 'F':
@@ -1990,13 +2005,13 @@ class Game():
                     
                     # Next check if either end is same color. First make sure not at either end of table. Don't do to silver (color = B)
                     if tile[j][3] != 'B':
-                        if player.feastTable[i][1] != 0:
-                            if player.feastTable[i - 1][3] == tile[j][3]:
+                        if i != 0:
+                            if player.feastTable[i - 1][2] == tile[j][3]:
                                 validPlacement = False
                                 continue
                             
-                        if player.feastTable[i][1] < len(player.feastTable) - tile[j][1]:
-                            if player.feastTable[i + tile[j][1]][3] == tile[j][3]:
+                        if i < len(player.feastTable) - tile[j][1]:
+                            if player.feastTable[i + tile[j][1]][2] == tile[j][3]:
                                 validPlacement = False
                                 continue
                            
@@ -2009,7 +2024,7 @@ class Game():
                                 continue
                             
                     if validPlacement:
-                        possiblePlacements.append(['FeastPlacements',tile[j] + [player.feastTable[i][1]]])
+                        possiblePlacements.append(['FeastPlacements',tile[j] + [i]])
             
         return possiblePlacements
     
@@ -2040,12 +2055,7 @@ class Player():
                           'Chalice':0, 'RoundShield':0, 'EnglishCrown':0}
 
         # FeastTable slot have Free (F) or occupied (name of tile); slot number; rotation horizontal (H), vertical (V), or both (B); and color Red (R), Orange (O), or Blue (B)
-        self.feastTable = [['F',0,'B','B'],
-                           ['F',1,'B','B'],
-                           ['F',2,'B','B'],
-                           ['F',3,'B','B'],
-                           ['F',4,'B','B'],
-                           ['F',5,'B','B']]
+        self.feastTable = [['F','B','B']] * 6
    
 class Board():
     def __init__(self):
@@ -2062,7 +2072,7 @@ class PlayerBoard(Board):
                       ['F','Income1','F','F','F','BonusStone','F','P','P','P','P','P','X'],
                       ['F','BonusMead','Income0','F','F','F','F','P','P','P','P','P','X'],
                       ['F','F','F','Income1','F','F','F','P','P','P','P','P','X'],
-                      ['F','F','BonusWood','F','Income1','F','BonusRuneStone','P','P','P','P','P','X'],
+                      ['F','F','BonusWood','F','Income1','F','BonusRunestone','P','P','P','P','P','X'],
                       ['F','F','F','F','F','Income1','F','P','P','P','P','P','X'],
                       ['BonusOre','F','F','F','F','F','Income1','P','P','P','P','P','X'],
                       ['P','P','P','P','P','P','P','Income1','P','P','P','P','X'],
