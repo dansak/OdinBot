@@ -11,4 +11,5 @@ class AI():
          elif self.aiType == 'Human':
              print('What action will player ' + str(player.ID + 1) + ' take:')
              return input()
-    
+         
+
