@@ -65,15 +65,15 @@ class Game():
             if i == 'A':
                 self.availableStartingOccupations += ['Farmhand','Sheapherd','Catapulter','RefugeeHelper','ProficientHunter',
                                                       'ApprenticeCraftsman','BosporusTraveler','Forester','Tanner','Slowpoke',
-                                                      'SoberMan','MeleeFighter','Woodcutter','Tutor','CraftLeader']
+                                                      'SoberMan','MeleeFighter','Woodcutter','TutorBlue','CraftLeader']
                 self.availableOccupations += ['ForeignTrader','Steersman','Helmsman','LinenWeaver','Tradesman','ShipBuilder',
                                               'Builder','ShipsCook','Homecomer','Miner','WeaponsSupplier','Follower','Dragonslayer',
                                               'YieldFarmer','Shipowner','Fisherman','OreBoatman','Digger','Farmer','Merchant','Nobleman',
-                                              'WhalingEquipper','HideBuyer','VillageLeader','Chief','SheepShearer','SpiceMerchant',
+                                              'WhalingEquipper','HideBuyer','VillageLeader','Chief','SheepShearer','SpiceMerchantOrange',
                                               'Miller','Drunkard','RuneEngraver','LinseedOilPresser','Peacemaker','Wanderer','Wholesaler',
                                               'CattleBreeder','OrientShipper','Barbarian','ArmedFighter','Cowherd','Custodian','BlubberCook',
                                               'MeatMerchant','MountainGuard','Priest','Trapper','Preacher','Breeder','ArmsDealer',
-                                              'WeaponSupplier','Tutor2','Furrier','Milker','PeaFlourBaker','FruitPicker','FlaxBaker','Peddler']
+                                              'WeaponSupplier','TutorOrange','Furrier','Milker','PeaFlourBaker','FruitPicker','FlaxBaker','Peddler']
             elif i == 'B':
                 self.availableStartingOccupations += ['DisheartenedWarrior','Collector','Undertaker','Barkeep','Steward','Princess','FineBlacksmith',
                                                       'MeatCurer','Angler','BeanFarmer','Cooper','Milkman','Middleman','FarmShopOwner','Berserker']
@@ -136,7 +136,14 @@ class Game():
                                   'WhaleMeat':'TreasureChest',
                                   'Cattle':'SilverHoard',
                                   'PregnantCattle':'SilverHoard'}  
-        
+                 
+        # List all possible Field Farmer upgrades which are orange tiles up and to the right up to two times
+        self.availableFieldFarmerUpgrades = {'Peas':['Stockfish','Wool'],
+                                  'Flax':['Milk','Linen'],
+                                  'Beans':['SaltMeat','SkinAndBones'],
+                                  'Grain':['GameMeat','Fur'],
+                                  'Cabbage':['Sheep','Robe'],
+                                  'Fruits':['Cattle']}  
         # List all possible green upgrades
         self.availableGreenUpgrades = {'Oil':'Runestone',
                                        'Hide':'Silverware',
@@ -162,6 +169,8 @@ class Game():
     def play(self):        
         # Play through each round
         for i in range(7):
+            # Count how many four viking actions were played for Homecomer
+            self.playedFourVikingActions = 0
                     
             # Available action spaces
             self.availableActions = ['BuildShed','BuildWhalingBoat','HuntingGameOne','HuntStockfish','BuyStockfish','BuySaltMeat','WeeklyMarketOne','ProductsOne','CraftLinen','CraftRunestone',
@@ -179,25 +188,20 @@ class Game():
             self.explorationPhase()
             self.drawWeaponPhase()
             self.actionPhase()
-            for i in self.players:
-                i.endedTurn = False
-                i.vikings = 0
+            for j in self.players:
+                j.endedTurn = False
+                j.vikings = 0
             self.determineStartingPlayerPhase()
             self.incomePhase()
             self.breedingPhase()
             self.actionPhase()
-            for i in self.players:
-                i.endedTurn = False
-            self.feastPhase()
-            self.bonusPhase()
-            self.mountainPhase()
-            self.returnVikingsPhase()
-            print('\nResources:')
-            print(self.players[0].resources)
-            print('\nFeast Table:')
-            print(self.players[0].feastTable)
-            print('\nMain Board:')
-            print(self.players[0].boards[0].tiles)
+            for j in self.players:
+                j.endedTurn = False
+            if i < 6:
+                self.feastPhase()
+                self.bonusPhase()
+                self.mountainPhase()
+                self.returnVikingsPhase()
             
         return self.score()
             
@@ -264,6 +268,10 @@ class Game():
             if not self.players[player].endedTurn:
                 ended += self.takeActions(self.players[player])
                 self.players[player].madeAction = False
+            if player < len(self.players) - 1:
+                player += 1
+            else:
+                player = 0
             
     def determineStartingPlayerPhase(self):
         print('\n***Determine Starting Player Phase***')
@@ -281,13 +289,13 @@ class Game():
         for i in self.players:
             if i.resources['PregnantSheep'] > 0:
                 i.resources['Sheep'] += i.resources['PregnantSheep'] + 1
-                i.resources['PregnantSheep'] = 0
+                i.resources['PregnantSheep'] -= 1
             elif i.resources['Sheep'] >= 2:
                 i.resources['PregnantSheep'] += 1
                 i.resources['Sheep'] -= 1
             if i.resources['PregnantCattle'] > 0:
                 i.resources['Cattle'] += i.resources['PregnantCattle'] + 1
-                i.resources['PregnantCattle'] = 0
+                i.resources['PregnantCattle'] -= 1
             elif i.resources['Cattle'] >= 2:
                 i.resources['PregnantCattle'] += 1
                 i.resources['Cattle'] -= 1              
@@ -361,13 +369,45 @@ class Game():
     def score(self):
         score = [0] * len(self.players)
         for i in range(len(self.players)):
+            # Ships
             score[i] += len(self.players[i].whalingBoats) * 3
             score[i] += len(self.players[i].knarrs) * 5
             score[i] += len(self.players[i].longships) * 8
-            score[i] += self.players[i].emigratePoints
             
-        return score
+            # Emigration
+            score[i] += self.players[i].emigratePoints     
             
+            # Exploration boards
+            for j in self.players[i].boards[1:9]:
+                score[i] += j.points
+                
+            # Houses
+            for j in self.players[i].houses:
+                score[i] += j.points
+                
+            # Sheep and cattle
+            score[i] += self.players[i].resources['Sheep'] * 2
+            score[i] += self.players[i].resources['PregnantSheep'] * 3
+            score[i] += self.players[i].resources['Cattle'] * 3
+            score[i] += self.players[i].resources['PregnantCattle'] * 4
+            
+            # Ooccupations
+            
+            # Silver
+            score[i] += self.players[i].resources['Silver']
+            
+            # Crown
+            
+            # Board negative points (home, explorations, and houses)
+            for j in self.players[i].houses + self.players[i].boards:
+                score[i] -= sum(x.count('P') for x in j.tiles)
+                
+            # Thing penalty
+            score[i] -= self.players[i].penalty * 3
+
+            
+            
+        return score            
             
     def drawWeapon(self, player, nWeapons):
         for i in range(nWeapons):
@@ -551,17 +591,146 @@ class Game():
         print('Playing ' + occupation)
         player.occupations.remove(occupation)
         player.playedOccupations.append(occupation)
-        # Logic for instant cards
+        
+        # Empty valid actions list for potential actions from cards
+        validActions = []
+            
+        # Logic for instant occupation cards
+        if occupation == 'Preacher':
+            validActions = ['']
+#            action = player.ai.takeAction(player, validActions)            
+        elif occupation == 'Miner':
+            player.resources['Ore'] += len(player.longships)
+            player.resources['Stone'] += len(player.longships)
+            player.resources['Silver'] += len(player.longships)
+        elif occupation == 'Homecomer':
+            player.vikings += self.playedFourVikingActions
+        elif occupation == 'Chief':
+            # Give thing penalty per open spot in feast table
+            player.penalty += player.feastTable.count(['F','B','B'])
+            # Clear feast table and add 1 slot
+            player.feastTable = [['F','B','B']] * (len(player.feastTable) + 1)
+        elif occupation == 'ShipBuilder':
+            validActions= ['']
+        elif occupation == 'SheepShearer':
+            if player.resources['Sheep'] + player.resources['PregnantSheep'] >= 6:
+                player.resources['Wool'] += 3
+            elif player.resources['Sheep'] + player.resources['PregnantSheep'] >= 4:
+                player.resources['Wool'] += 2
+            elif player.resources['Sheep'] + player.resources['PregnantSheep'] >= 3:
+                player.resources['Wool'] += 1
+        elif occupation == 'Breeder':
+            if player.resources['Cattle'] >= 1:
+                player.resources['Cattle'] -= 1
+                player.resources['PregnantCattle'] += 1
+        elif occupation == 'OrientShipper':
+            validActions = ['']
+        elif occupation == 'WeaponSupplier':
+            self.drawWeapon(player, 4)
+        elif occupation == 'Builder':
+             for j in player.houses:
+                # Check every X
+                for k in range(len(j.tiles[0])):
+                    # Check every Y
+                    for l in range(len(j.tiles)):
+                        # Look for spaces starting with bonus
+                        if j.tiles[l][k][0:5] == 'Bonus':
+                            validBonus = True
+                            # Check top
+                            if l < len(j.tiles) - 1:
+                                if j.tiles[l + 1][k] in ['F','P']:
+                                    validBonus = False
+                            # Check right
+                            if k < len(j.tiles[0]) - 1:
+                                if j.tiles[l][k + 1] in ['F','P']:
+                                    validBonus = False
+                            # Check bottom
+                            if l > 0:
+                                if j.tiles[l - 1][k] in ['F','P']:
+                                    validBonus = False
+                            # Check left
+                            if k > 0:
+                                if j.tiles[l][k - 1] in ['F','P']:
+                                    validBonus = False
+                            if validBonus:
+                                player.resources[j.tiles[l][k][5:99]] += 1
+        elif occupation == 'Cowherd':
+            validActions = ['']
+        elif occupation == 'CattleBreeder':
+            if player.resources['PregnantSheep'] > 0:
+                player.resources['Sheep'] += player.resources['PregnantSheep'] + 1
+                player.resources['PregnantSheep'] -= 1
+            elif player.resources['Sheep'] >= 2:
+                player.resources['PregnantSheep'] += 1
+                player.resources['Sheep'] -= 1
+            if player.resources['PregnantCattle'] > 0:
+                player.resources['Cattle'] += player.resources['PregnantCattle'] + 1
+                player.resources['PregnantCattle'] -= 1
+            elif player.resources['Cattle'] >= 2:
+                player.resources['PregnantCattle'] += 1
+                player.resources['Cattle'] -= 1    
+        elif occupation == 'WhalingEquipper':
+            player.resources['Oil'] += len(player.knarrs)
+            player.resources['Wood'] += len(player.whalingBoats)
+        elif occupation == 'Custodian':
+            for i in player.houses:
+                if i.houseType in ['StoneHouse','LongHouse']:
+                    player.resources['Silver'] += 2
+        elif occupation == 'Wholesaler':
+            for i in self.availableSingleUpgrades:
+                if player.resources[i] >= 1:
+                    for j in range(max(4, player.resources[i])):
+                        validActions.append(['Wholesaler',{'Tile':i,'NumUpgrades':j + 1}])
+        elif occupation == 'HideBuyer':
+            if player.resources['Silver'] >= 6:
+                validActions.append(['HideBuyer',{'Hides':3}])
+            if player.resources['Silver'] >= 4:
+                validActions.append(['HideBuyer',{'Hides':2}])
+            if player.resources['Silver'] >= 2:
+                validActions.append(['HideBuyer',{'Hides':1}])
+        elif occupation == 'Follower':
+            pass
+        elif occupation == 'Fisherman':
+            player.resources['Stockfish'] += len(player.whalingBoats)
+        elif occupation == 'Milker':
+            if player.resources['Sheep'] + player.resources['PregnantSheep'] >= 1:
+                player.resources['Milk'] += 1
+                player.resources['Silver'] += 1
+            if player.resources['Cattle'] + player.resources['PregnantCattle'] >= 1:
+                player.resources['Milk'] += 1
+                player.resources['Silver'] += 1
+        elif occupation == 'WeaponsSupplier':
+            if len(player.longships) >= 3:
+                self.drawWeapon(player, 10)
+            elif len(player.longships) == 2:
+                self.drawWeapon(player, 5)
+            elif len(player.longships) == 1:
+                self.drawWeapon(player, 2)
+        elif occupation == 'FieldFarmer':
+            pass
+        elif occupation == 'FruitPicker':
+            pass
+        elif occupation == 'Helmsman':
+            pass
+        elif occupation == 'Sheapherd':
+            pass
+        elif occupation == 'Dragonslayer':
+            pass
+            
      
     # Take an action or anytime action
     def takeActions(self, player):
         passed = False
         while not passed:
             action = player.ai.takeAction(player, self.determineValidActions(player))
-            print('You have ' + str(player.vikings) + ' vikings')
+            print('Player ' + str(player.ID + 1) + ' has ' + str(player.vikings) + ' vikings')
             print(str(len(self.determineValidActions(player))) + ' possible actions')
             print(action)
             if action[0] in self.availableActions:
+                if action[0] in ['BuildHouseBoat','WhalingTwo','BuySheepAndCattle','WeeklyMarketFour','CraftingFour',
+                                     'MountainFourUpgradeTwoTwice','MountainOrUpgrade','Plundering','EmigrateThree']:
+                    player.vikings -= 4
+                    self.playedFourVikingActions += 1
                 if action[0] == 'BuildShed':
                     player.vikings -= 1
                     player.resources['Wood'] -= 2
@@ -954,6 +1123,28 @@ class Game():
                         if [i, j] not in action[1][3]:
                             player.boards[action[1][7]].tiles[action[1][9] + j][action[1][8] + i] = 'O' + action[1][6]    
                 player.resources[action[1][0]] -= 1
+            elif action[0] == 'Arm':
+                if action[1][0] == 'Longship':
+                    for i in range(len(player.longships)):
+                        if player.longships[i].ore < 3:
+                            player.longships[i].ore += 1
+                            break                    
+                if action[1][0] == 'WhalingBoat':
+                    for i in range(len(player.whalingBoats)):
+                        if player.whalingBoats[i].ore < 2:
+                            player.whalingBoats[i].ore += 1
+                            break
+                player.resources['Ore'] -= 1
+            elif action[0] == 'BuyBoat':
+                if action[1][0] == 'WhalingBoat':
+                    player.resources['Silver'] -= 3
+                    player.whalingBoats.append(Boat('WhalingBoat'))                
+                elif action[1][0] == 'Knarr':
+                    player.resources['Silver'] -= 5
+                    player.knarrs.append(Boat('Knarr'))
+                elif action[1][0] == 'Longship':
+                    player.resources['Silver'] -= 8
+                    player.longships.append(Boat('Longship'))
             elif action[0] == 'PassTurn':
                 passed = True
             elif action[0] == 'EndTurn':
@@ -983,7 +1174,61 @@ class Game():
             
         # Option to completely end turn for the round
         validActions.append(['EndTurn',['EndTurn']])
+        
+        # Arm option
+        if len(player.longships) > 0:
+            if player.resources['Ore'] >= 1 and player.longships[len(player.longships) - 1].ore < 3:
+                validActions.append(['Arm',['Longship']])
+        if len(player.whalingBoats) > 0:
+            if player.resources['Ore'] >= 1 and player.whalingBoats[len(player.whalingBoats) - 1].ore < 2:
+                validActions.append(['Arm',['WhalingBoat']])
             
+        # Buy boat option
+        if player.resources['Silver'] >= 3 and len(player.whalingBoats) < 3:
+            validActions.append(['BuyBoat',['WhalingBoat']])
+        if player.resources['Silver'] >= 5 and len(player.knarrs) + len(player.longships) < 4:
+            validActions.append(['BuyBoat',['Knarr']])        
+        if player.resources['Silver'] >= 8 and len(player.knarrs) + len(player.longships) < 4:
+            validActions.append(['BuyBoat',['Longship']])
+        
+        # Tanner
+        if 'Tanner' in player.playedOccupations and player.resources['SaltMeat'] >= 1:
+            validActions.append(['Tanner',['Tanner']])
+            
+        # Linen Weaver
+        if 'LinenWeaver' in player.playedOccupations and player.resources['Flax'] >= 2 and player.resources['Silver'] >= 1:
+            validActions.append(['LinenWeaver',['LinenWeaver']])
+            
+        # Arms Dealer
+        if 'ArmsDealer' in player.playedOccupations and player.resources['Sword'] + player.resources['Bow'] + player.resources['Spear'] + player.resources['Snare'] >= 2:
+            weaponCombinations = list(itertools.combinations(['Sword'] * player.resources['Sword'] + ['Bow'] * player.resources['Bow'] + ['Spear'] * player.resources['Spear'] + ['Snare'] * player.resources['Snare'], 2))
+            for i in weaponCombinations:
+                validActions.append(['ArmsDealer',i])
+            
+        # Farmer
+        if 'Farmer' in player.playedOccupations and player.resources['Cattle'] + player.resources['PregnantCattle'] >= 1:
+            if player.resources['Cattle'] >= 1:
+                validActions.append(['Farmer',['Cattle']])
+            if player.resources['PregnantCattle'] >= 1:
+                validActions.append(['Farmer',['Farmer']])  
+                
+        # Rune Engraver
+        if 'RuneEngraver' in player.playedOccupations and player.resources['Runestone'] >= 1:
+            validActions.append(['RuneEngraver',['RuneEngraver']])
+            
+        # Lineseed Oil Presser
+        if 'LinseedOilPresser' in player.playedOccupations and player.resources['Flax'] >= 2:
+            validActions.append(['LinseedOilPresser',['LinseedOilPresser']])
+            
+        # Tradesman
+        if 'Tradesman' in player.playedOccupations and player.resources['Silverware'] >= 1:
+            validActions.append(['Tradesman',['Tradesman']])
+                        
+        # Tutor Blue
+        if 'TutorBlue' in player.playedOccupations and player.resources['Silver'] >= 1 and len(player.occupations) > 0:
+            for i in player.occupations:                
+                validActions.append(['TutorBlue',[i]])            
+        
         # Option to pass the turn to next player. Otherwise can play action
         if player.madeAction:
             validActions.append(['PassTurn',['PassTurn']])
@@ -2201,7 +2446,7 @@ class House():
             self.WoodSlots = 1
             self.StoneSlots = 1
         elif houseType == 'LongHouse':
-            self.ponts = 17
+            self.points = 17
             self.tiles = [['F','P','F','P','F','P','F','P','F','P','BonusPeas'],
                           ['P','BonusOil','P','X','P','F','P','X','P','F','P'],
                           ['F','P','F','P','F','BonusBeans','F','P','F','P','X']]
