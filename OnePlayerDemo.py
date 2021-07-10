@@ -6,7 +6,7 @@ from Odin import *
 from AI import *
 
 scores = []
-for i in range(100000):
+for i in range(10000):
     game = Game(nHumanPlayers = 0, nBotPlayers = 2, ai = ['Random','Random'], occupationSet = ['A','B','C'])
     scores.append(game.play())
 
